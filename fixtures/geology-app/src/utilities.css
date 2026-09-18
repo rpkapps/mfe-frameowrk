@@ -1,0 +1,4 @@
+@import 'tailwindcss/utilities.css' layer(utilities);
+@reference "@tecton/react/globals.css";
+@source "./";
+@source "../../../node_modules/@tecton/react/src";

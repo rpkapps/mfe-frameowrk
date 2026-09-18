@@ -7,3 +7,7 @@ node_modules/
 **/test-results/
 pnpm-lock.yaml
 docs/mfe-framework-spec.md
+vendor/tecton-react/src/
+vendor/tecton-react/styles/
+vendor/tecton-react/third-party/
+vendor/tecton-react/types/

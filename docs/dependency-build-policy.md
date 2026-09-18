@@ -53,3 +53,9 @@ Temporary files live in a unique directory below `node_modules` and are removed 
 completion, including failed assertions. Install-script policy checks verify these
 fixtures only. They do not establish a clean-cache scaffold installation, package
 distribution, or the safety of code explicitly executed by developers.
+
+## Test-shell toolchain review
+
+Rspack 2.2.6 and its exact same-version platform bindings have narrowly scoped release-age exceptions. Their registry artifacts declare no preinstall/install/postinstall hooks; native code is delivered as platform packages. This does not approve lifecycle scripts: `allowBuilds` remains empty. The frozen lockfile pins the Rspack, federation, compiler, Tailwind, browser-test, and Tecton dependency graph.
+
+React Compiler 1.0.0 uses Babel 7.29.7: an actual default-destructured TSX component failed optimization with Babel 8.0.5 and passed with Babel 7.29.7. The regression is checked alongside CSS isolation tests. Tecton is a private local file artifact with immutable upstream checksums and no dependency install scripts; its tracked declarations are generated explicitly by the preparation script.

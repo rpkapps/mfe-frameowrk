@@ -5,7 +5,7 @@ import { createMfeError } from '@company/mfe-core';
 import type { MfeRouterContext } from './router-context';
 
 export type { MfeRouterContext } from './router-context';
-export { useUser, useGroups, useTheme } from './shell-state-context';
+export { useUser, useGroups, useTheme } from '@company/mfe-react/internal/shell-state-context';
 
 /** Native bootstrap options supplied for one mount; forward all three unchanged. */
 export interface AppRouterOptions {

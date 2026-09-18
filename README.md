@@ -1,6 +1,26 @@
 # MFE framework
 
-**Gate 0 passed** for the supplied specification and [approved contract revisions](docs/approved-contract-revisions.md). This checkpoint contains the React App adapter, neutral lifecycle/error contracts, selective shell-state hooks, shared lint tooling, generated-route author fixture, and executable acceptance tests. All packages remain private; this is not a complete framework release.
+A local Tecton shell and two independently served MF2 Apps live in this repository. The shell owns the header; Discovery and Geology own everything below it. Gate 0 remains passed; the test environment is an integration checkpoint, not a complete framework release.
+
+## Run the test environment
+
+```sh
+corepack pnpm@12.4.2 install --frozen-lockfile
+pnpm dev
+```
+
+Open **http://localhost:4100**. One command generates routes and starts the shell plus both Rspack remotes. Use the app finder or **Ctrl/Cmd+K** to switch applications; **?** lists shortcuts. **Ctrl+C** stops all three servers.
+
+| Command                                   | Starts                                                     |
+| ----------------------------------------- | ---------------------------------------------------------- |
+| `pnpm dev`                                | Shell (4100), Discovery (4101), Geology (4102)             |
+| `pnpm dev:shell`                          | Shell only                                                 |
+| `pnpm dev:remotes`                        | Both remotes                                               |
+| `pnpm dev:discovery` / `pnpm dev:geology` | One remote                                                 |
+| `pnpm build:test-apps`                    | Production builds of all three                             |
+| `pnpm test:browser`                       | Playwright acceptance against the running test environment |
+
+Remote edits reload the page, preserving the URL and shell theme. Component-local state resets. See [test-shell setup and boundaries](docs/test-shell.md), including local URL overrides and browser installation.
 
 ## Verify
 
@@ -24,8 +44,8 @@ Components use `useUser`, `useGroups`, and `useTheme` for live shell state. Rout
 
 The adapter reports reserved-context conflicts, preserves native author error boundaries, and retires failed mounts without patching router internals or shared route trees. [Validation details](docs/gate-zero-validation.md) state the exact diagnostic and cancellation boundaries.
 
-## Next integration prerequisite
+## Integration scope
 
-Gate 1 requires the actual shell source/integration location plus its startup, authenticated-session, and development registry-enrollment instructions. These were absent from the destination repository. In-process fixtures cannot establish that integration; no standalone authentication harness substitutes for it.
+The user approved an in-repo test shell because no separate shell repository exists. It uses a fixed development persona and local App registry; it does not claim authenticated production integration. Remaining Gate 1 proofs and later gate requirements are recorded in [progress](docs/progress.md).
 
-Read [progress](docs/progress.md), [contributing guidance](docs/contributing.md), and [dependency-script policy](docs/dependency-build-policy.md). The supplied specification and approved revisions remain the requirements; later gates are unchanged.
+Read [contributing guidance](docs/contributing.md), [dependency-script policy](docs/dependency-build-policy.md), and [approved contract revisions](docs/approved-contract-revisions.md).

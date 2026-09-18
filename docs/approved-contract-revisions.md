@@ -103,3 +103,7 @@ The top-level `queryClient` stays the same mount-owned service instance used by 
 | §§17.2, 17.5               | Align portability substitutes and shell-state render-isolation probes.                                                                                                                                                              |
 
 Historical findings remain in [Gate 0 feasibility](./gate-zero-feasibility.md) and [Query context feasibility](./query-context-feasibility.md). Current implementation evidence and remaining work belong in [the progress record](./progress.md); approval alone does not retire those risks.
+
+## Local development shell — approved 2026-09-18
+
+The user has no separate shell repository and explicitly requested a test shell inside this repository, using Tecton shell-01 with app content mounted beneath its header and one pnpm command for all test applications. This authorizes the local shell and fixed development persona, replacing the earlier prohibition on a standalone development shell for this test environment. It does not establish real authentication, approve deployment, or waive the remaining integration gates.

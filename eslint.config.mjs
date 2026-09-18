@@ -4,6 +4,7 @@ import mfe from '@company/eslint-plugin-mfe';
 export default [
   {
     ignores: [
+      'vendor/tecton-react/**',
       '**/node_modules/**',
       '**/dist/**',
       '**/coverage/**',
@@ -14,10 +15,12 @@ export default [
     ],
   },
   ...mfe.configs.framework,
-  ...mfe.configs.author.map((config) => ({
-    ...config,
-    files: config.files?.map((pattern) => `fixtures/introductory-app/${pattern}`),
-  })),
+  ...['introductory-app', 'discovery-app', 'geology-app'].flatMap((fixture) =>
+    mfe.configs.author.map((config) => ({
+      ...config,
+      files: config.files?.map((pattern) => `fixtures/${fixture}/${pattern}`),
+    })),
+  ),
   {
     name: 'workspace/node-tooling',
     files: [

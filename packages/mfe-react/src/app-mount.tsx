@@ -13,7 +13,7 @@ import type { MfeRouterContext } from './router-context';
 import { createContextValidator, invalidRouter } from './reserved-context';
 import { createShellState } from './shell-state';
 import type { ShellState } from './shell-state';
-import { ShellStateProvider } from './shell-state-context';
+import { ShellStateProvider } from '@company/mfe-react/internal/shell-state-context';
 
 class MountErrorBoundary extends Component<
   PropsWithChildren<{ readonly onError: (cause: unknown) => void }>,

@@ -1,0 +1,45 @@
+import type { ReactElement, SVGProps } from "react";
+export type TectonIconVariant = "outlined" | "filled";
+/**
+ * Where a rendered icon's glyph comes from:
+ *   - `svg`              the real Tecton glyph from icons-src/
+ *   - `lucide-fallback`  the closest lucide-react icon (no Tecton SVG yet)
+ *   - `placeholder`      dashed square (no Tecton SVG, no lucide peer)
+ */
+export type TectonIconSource = "svg" | "lucide-fallback" | "placeholder";
+/**
+ * lucide-compatible icon props. Every Tecton icon is a plain function
+ * component (React 19 forwards `ref` as a prop, so no forwardRef needed).
+ */
+export interface TectonIconProps extends SVGProps<SVGSVGElement> {
+    /** Width and height (default 24). */
+    size?: number | string;
+    /** Stroke width for stroke-based glyphs; defaults to the glyph's own. */
+    strokeWidth?: number | string;
+    /** Keep the stroke visually constant when `size` changes (lucide semantics). */
+    absoluteStrokeWidth?: boolean;
+    /** Glyph style (default `outlined`). */
+    variant?: TectonIconVariant;
+}
+export type TectonIconComponent = ((props: TectonIconProps) => ReactElement) & {
+    displayName?: string;
+};
+/** One row of the `tectonIcons` gallery array. */
+export interface TectonIconEntry {
+    /** PascalCase name without suffix, e.g. `AddCircle`. */
+    name: string;
+    /** Exported identifier / gallery label, e.g. `AddCircleIcon`. */
+    label: string;
+    /** kebab-case id; also the `data-tecton-icon` value and the file name. */
+    slug: string;
+    description: string;
+    Icon: TectonIconComponent;
+    /** Source of the default (outlined) variant. */
+    source: TectonIconSource;
+    /** Source per variant (a missing variant falls back to the other one). */
+    sources: Record<TectonIconVariant, TectonIconSource>;
+    /** Oil & gas / subsurface domain glyph. */
+    domain: boolean;
+    /** Closest lucide-react icon (kebab-case lucide name) or null. */
+    lucide: string | null;
+}

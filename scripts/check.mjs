@@ -21,6 +21,7 @@ function binary(packageName, name) {
 // a different global version than the exact Corepack invocation that started us.
 const checks = [
   ['generation', ['scripts/generate.mjs']],
+  ['Tecton distribution integrity', ['scripts/prepare-tecton.mjs', '--check']],
   ['formatting', [binary('prettier', 'prettier'), '--check', '.']],
   ['lint', [binary('eslint', 'eslint'), '.']],
   ['framework types', [binary('typescript', 'tsc'), '--noEmit']],
@@ -28,6 +29,10 @@ const checks = [
     'App types',
     [binary('typescript', 'tsc'), '--noEmit', '-p', 'fixtures/introductory-app/tsconfig.json'],
   ],
+  ...['test-shell', 'discovery-app', 'geology-app'].map((fixture) => [
+    `${fixture} types`,
+    [binary('typescript', 'tsc'), '--noEmit', '-p', `fixtures/${fixture}/tsconfig.json`],
+  ]),
   ['package boundaries', ['scripts/check-boundaries.mjs']],
   ['behavior tests', [binary('vitest', 'vitest'), 'run']],
   ['dependency build policy', ['scripts/check-build-policy.mjs']],

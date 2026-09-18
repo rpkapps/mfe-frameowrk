@@ -20,7 +20,10 @@
       "@company/mfe-host": ["./packages/mfe-host/src/index.ts"],
       "@company/mfe-host/internal": ["./packages/mfe-host/src/internal.ts"],
       "@company/mfe-react": ["./packages/mfe-react/src/index.ts"],
-      "@company/mfe-react/internal": ["./packages/mfe-react/src/internal.ts"]
+      "@company/mfe-react/internal": ["./packages/mfe-react/src/internal.ts"],
+      "@company/mfe-react/internal/shell-state-context": [
+        "./packages/mfe-react/src/shell-state-context.tsx"
+      ]
     }
   },
   "include": [
@@ -28,7 +31,8 @@
     "packages/**/*.tsx",
     "tests/**/*.ts",
     "tests/**/*.tsx",
-    "vitest*.ts"
+    "vitest*.ts",
+    "playwright.config.ts"
   ],
   "exclude": ["node_modules", "dist", "fixtures"]
 }

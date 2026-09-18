@@ -1,0 +1,14 @@
+{
+  "name": "@company/fixture-test-shell",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@company/mfe-react": "workspace:*",
+    "@tanstack/react-router": "1.170.38",
+    "@tecton/react": "file:../../vendor/tecton-react",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "@tanstack/history": "1.162.4",
+    "@module-federation/enhanced": "2.9.0"
+  }
+}

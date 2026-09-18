@@ -1,0 +1,19 @@
+@import '@tecton/react/globals.css';
+@source './';
+
+.mfe-target,
+.mfe-placement,
+.mfe-placement > div {
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+}
+.shell-loading {
+  padding: 2rem;
+  color: var(--muted-foreground);
+}
+.shell-notice {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  background: var(--muted);
+}
