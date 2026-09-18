@@ -28,7 +28,6 @@ it('builds a bounded remote with compiled and explicitly excluded adapter consum
     'react/jsx-runtime',
     'react/jsx-dev-runtime',
     'react/compiler-runtime',
-    'react-aria/private/overlays/PortalProvider',
     'react-dom/client',
     '@company/mfe-react/internal/shell-state-context',
     '@tecton/react/',

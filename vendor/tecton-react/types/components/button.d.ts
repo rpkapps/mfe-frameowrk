@@ -2,7 +2,7 @@ import type * as React from "react";
 import { type VariantProps } from "class-variance-authority";
 import { type ButtonProps as ButtonPrimitiveProps, type LinkProps as LinkPrimitiveProps } from "react-aria-components";
 declare const buttonVariants: (props?: ({
-    variant?: "default" | "outline" | "secondary" | "ghost" | "destructive" | "link" | null | undefined;
+    variant?: "link" | "default" | "outline" | "secondary" | "ghost" | "destructive" | null | undefined;
     size?: "default" | "xs" | "sm" | "lg" | "icon" | "icon-xs" | "icon-sm" | "icon-lg" | null | undefined;
 } & import("class-variance-authority/types").ClassProp) | undefined) => string;
 declare function Button({ className, variant, size, ...props }: Omit<ButtonPrimitiveProps, "className"> & React.RefAttributes<HTMLButtonElement> & VariantProps<typeof buttonVariants> & {

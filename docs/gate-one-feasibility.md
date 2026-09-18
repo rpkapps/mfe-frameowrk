@@ -1,5 +1,29 @@
 # Gate 1 feasibility evidence
 
+## Current bounded evidence — 2026-09-18
+
+- The native Tecton `Dialog`, `Button`, and `PortalProvider` path replaces the
+  custom blocker modal. The host regression verifies that native back restores
+  the cursor before blocking and that the resolver proceeds once.
+- The real MF2 Discovery proof mounts the generated route tree concurrently in
+  distinct router/context/loader instances and keeps unsaved blockers
+  mount-local. The browser run currently fails on the portal-context issue
+  before disposal isolation can be established.
+- Compiled and explicit `use no memo` consumers respond to framework hook/theme
+  updates. The artifact checks cover compiler output, source maps, and scope
+  locations. Three production builds pass; local `check` passes 208 behavior
+  tests and Gate 0 passes both tests.
+- The emitted portal-context issue is owned upstream in
+  [Tecton PR #24](https://github.com/rpkapps/tecton-ui-1/pull/24), covering
+  internal forwarding for supported React Aria Components overlay wrappers;
+  consumers use the Tecton API. Durable head
+  `8b1aa66c2a600b8c32ebef6d98bafb6121e940d7` is pinned. The corrected 17-file
+  upstream diff matches exactly and was tested in `97c39`; the initial export
+  had omitted the runtime commit. The prior `1053f681...` scoped-sharing
+  browser failure is a resolved candidate pending browser confirmation.
+- Framework `check` passes locally with 208 behavior tests; the final CI browser
+  result is pending. No browser-pass claim is made.
+
 The bounded Rsbuild proof passes for a production Discovery remote. The test creates a temporary output directory and exercises the real `mfePlugin` configuration, so it checks emitted artifacts rather than only plugin options:
 
 ```sh

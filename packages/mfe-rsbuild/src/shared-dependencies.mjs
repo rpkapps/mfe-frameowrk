@@ -17,15 +17,6 @@ export function sharedDependencies() {
       { singleton: true, strictVersion: true, requiredVersion: version },
     ]),
   );
-  // Keep the PortalProvider context shared across React Aria's root barrel
-  // and relative Overlay imports without overlapping broad subpath entries
-  // that destabilize production chunk IDs.
-  shared['react-aria/private/overlays/PortalProvider'] = {
-    singleton: true,
-    strictVersion: true,
-    requiredVersion: versions['react-aria'],
-    packageName: 'react-aria',
-  };
   for (const subpath of ['jsx-runtime', 'jsx-dev-runtime', 'compiler-runtime']) {
     shared[`react/${subpath}`] = {
       singleton: true,
@@ -52,7 +43,7 @@ export function sharedDependencies() {
   shared['@tecton/react/'] = {
     singleton: true,
     strictVersion: true,
-    requiredVersion: '0.0.0-local.424889e4',
+    requiredVersion: '0.0.0-local.8b1aa66c',
     packageName: '@tecton/react',
   };
   return shared;

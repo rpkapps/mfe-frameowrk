@@ -1,5 +1,6 @@
 import * as React from "react"
 import { cn } from "cn"
+import { usePortalTarget } from "@tecton/react/tecton/portal"
 import {
   Focusable,
   OverlayArrow,
@@ -42,6 +43,7 @@ function Tooltip({
   className?: string
   children?: React.ReactNode
 }) {
+  const portalTarget = usePortalTarget()
   return (
     <TooltipPrimitive
       data-slot="tooltip-content"
@@ -53,6 +55,7 @@ function Tooltip({
         className
       )}
       {...props}
+      UNSTABLE_portalContainer={portalTarget}
     >
       {children}
       <OverlayArrow

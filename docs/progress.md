@@ -1,6 +1,38 @@
 # Implementation progress
 
-## Current checkpoint — 2026-09-18
+## Gate 1 closeout candidate — 2026-09-18
+
+- Replaced the custom modal path with native Tecton `Dialog`, `Button`, and
+  `PortalProvider` usage. The native boundary blocker now restores the cursor
+  before blocking and proceeds through the native resolver exactly once; a real
+  host navigation regression covers this ordering.
+- Added the real MF2 concurrent Discovery proof: two mounts use the same
+  generated route tree while retaining distinct router/context/loader state,
+  with per-mount unsaved-navigation blockers. The browser run currently fails
+  on the portal-context issue before it can establish the disposal-isolation
+  assertion.
+- Added compiled and explicit `use no memo` consumer coverage. Both consumers
+  continue to receive selective framework hook/theme updates, and the build
+  evidence checks compiler output, source maps, and retained scope locations.
+- The emitted portal-context issue is owned upstream in
+  [Tecton PR #24](https://github.com/rpkapps/tecton-ui-1/pull/24), which covers
+  internal forwarding for supported React Aria Components overlay wrappers;
+  consumers use the Tecton API. Durable upstream head
+  `8b1aa66c2a600b8c32ebef6d98bafb6121e940d7` is now pinned. The corrected
+  17-file upstream diff matches exactly and was tested in `97c39`; the initial
+  export had omitted the runtime commit. The prior `1053f681...` scoped-sharing
+  browser failure is therefore a resolved candidate awaiting browser
+  confirmation.
+- Framework full `check` passes locally with 208 behavior tests; the final CI
+  browser result is pending. No browser pass is claimed. Chromium is the
+  initial matrix engine; Firefox and WebKit remain untested.
+- Gate 1 remains open. The reviewed OTel/Zone candidate does not preserve active
+  parentage through native `await` in the current ES2022 output. The trace
+  document records a decision proposal only: framework-managed operation
+  boundaries with explicit telemetry-service parameters for non-React utilities,
+  retaining non-active/manual `startSpan` and explicit `end()`, or a separately
+  proven shell async-context runtime with downleveling. There is no emitted
+  browser tracer proof and no approved contract revision yet.
 
 ## Gate 1 bounded evidence — 2026-09-18
 

@@ -9,8 +9,8 @@ import * as React from "react";
  * frontends, embedded widgets) give each root a body-level container of its
  * own, so the overlays keep escaping `overflow: hidden` ancestors while the
  * container carries that root's scoped styles, theme tokens and ownership
- * attributes. The provider is a thin adapter over React Aria's portal
- * context; nothing in the DOM, `document.body` or React's portals is patched.
+ * attributes. Tecton owns the container context and overlay wrappers pass the
+ * resolved container directly to their React Aria Components primitive.
  */
 type PortalProviderProps = {
     /**
@@ -26,5 +26,7 @@ declare function PortalProvider({ container, children }: PortalProviderProps): i
  * `PortalProvider` is in scope (React Aria then uses `document.body`).
  */
 declare function usePortalContainer(): HTMLElement | null;
-export { PortalProvider, usePortalContainer };
+/** The concrete target passed to React Aria Components overlay primitives. */
+declare function usePortalTarget(): HTMLElement | undefined;
+export { PortalProvider, usePortalContainer, usePortalTarget };
 export type { PortalProviderProps };
