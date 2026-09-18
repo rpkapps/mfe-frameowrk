@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { createShellState } from './shell-state';
-import type { ShellState } from './shell-state';
+import type { ShellState } from '@company/mfe-core';
 
 const initialState: ShellState = {
   user: { id: 'user-1', name: 'Ada' },

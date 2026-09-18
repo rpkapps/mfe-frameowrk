@@ -51,8 +51,6 @@ export interface TestShellProps {
   readonly children: ReactNode;
   readonly theme: 'dark' | 'light';
   readonly onThemeChange: (theme: 'dark' | 'light') => void;
-  readonly error?: string | undefined;
-  readonly onRetry: () => void;
 }
 
 const apps: ShellApp[] = [
@@ -83,15 +81,7 @@ export function TestShell(props: TestShellProps) {
 }
 
 /** Adapts Tecton's shell-01 header with working actions for the local catalogue. */
-function ShellLayout({
-  appId,
-  onAppChange,
-  children,
-  theme,
-  onThemeChange,
-  error,
-  onRetry,
-}: TestShellProps) {
+function ShellLayout({ appId, onAppChange, children, theme, onThemeChange }: TestShellProps) {
   const [paletteOpen, setPaletteOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const shortcuts = useShortcuts();
@@ -235,15 +225,6 @@ function ShellLayout({
             className="test-shell__workspace"
           >
             {children}
-            {error ? (
-              <div className="test-shell__error" role="alert">
-                <div className="max-w-md space-y-4 rounded-lg border bg-card p-6 shadow-lg">
-                  <h1 className="text-lg font-semibold">Unable to open {name}</h1>
-                  <p className="text-sm text-muted-foreground">{error}</p>
-                  <Button onPress={onRetry}>Try again</Button>
-                </div>
-              </div>
-            ) : null}
           </AppShellMain>
         </AppShellBody>
       </AppShell>
@@ -261,5 +242,25 @@ function ShellLayout({
         shortcuts={shortcuts}
       />
     </>
+  );
+}
+
+export function AppFailure({
+  name,
+  error,
+  onRetry,
+}: {
+  readonly name: string;
+  readonly error: string;
+  readonly onRetry: () => void;
+}) {
+  return (
+    <div className="test-shell__error" role="alert">
+      <div className="max-w-md space-y-4 rounded-lg border bg-card p-6 shadow-lg">
+        <h1 className="text-lg font-semibold">Unable to open {name}</h1>
+        <p className="text-sm text-muted-foreground">{error}</p>
+        <Button onPress={onRetry}>Try again</Button>
+      </div>
+    </div>
   );
 }

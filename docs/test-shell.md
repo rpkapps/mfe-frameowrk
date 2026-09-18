@@ -46,3 +46,19 @@ Playwright starts the complete environment when necessary and reuses it locally 
 The [Tecton distribution record](tecton-distribution.md) documents the pinned upstream source, private local package, generated declarations, and CSS adaptation. The supplied `tecton-ui-1code` URL returned 404; the source named in the original specification, `tecton-ui-1`, contains the matching shell-01 block and components. No upstream generated component was edited.
 
 This shell uses a fixed test persona and sample project data. It provides a development integration location; authentication and the remaining framework gates are tracked separately in [progress](progress.md).
+
+## Runtime ownership
+
+The shell uses public `createAppRuntime`/`createBrowserNavigation` from `mfe-host`, `AppHost`/`createReactAdapter` from `mfe-react`, and transport helpers from `mfe-rspack/runtime`. Its catalogue supplies IDs, adapter names and URLs; the host selects adapters from a table.
+
+| Package              | Responsibility                                                                                                                           |
+| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `mfe-core`           | Shared shell-state and lifecycle contracts, descriptors and errors                                                                       |
+| `mfe-host`           | Registry validation, loader coordination, retry and cancellation, placement, shell-state store, browser boundary navigation and disposal |
+| `mfe-react`          | React binding/rendering/hooks, native TanStack history translation, Router context and Query session transitions                         |
+| `mfe-rspack/runtime` | MF2 remote loading/cache reset, URL override validation and development rebuild watching                                                 |
+| Test shell           | Header, app destinations, shell inputs, theme persistence and loading/error presentation                                                 |
+
+A future Angular adapter implements `AppAdapter.create` and returns an `AppDriver`. The host supplies the neutral definition, placement, shell-state store and navigation factory. Each `mount(attempt)` registers acquired resources immediately using `onDetach` and `onCleanup`, and checks `isCurrent` after awaiting work. A driver may implement `updateShellState` when its router/data layer needs coordinated session invalidation. The host otherwise updates the shared store directly. Mount-level `detach` and `dispose` release adapter resources retained across retries.
+
+The DOM-only adapter in `mfe-host` tests demonstrates this path without importing React or TanStack. The internal native-memory-history React harness also runs through the same host runtime. No Angular implementation is included in this change.

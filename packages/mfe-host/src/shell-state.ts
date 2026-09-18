@@ -1,26 +1,6 @@
-/** Readonly shell values shared by route snapshots and React subscriptions. */
-export interface ShellState {
-  readonly user: { readonly id: string; readonly name: string } | null;
-  readonly groups: readonly string[];
-  readonly theme: 'light' | 'dark';
-}
+import type { ShellState, ShellStateStore } from '@company/mfe-core';
 
 type Listener = () => void;
-
-/** Adapter-owned state; component authors observe it through the field hooks. */
-export interface ShellStateStore {
-  readonly getSnapshot: () => ShellState;
-  readonly getUser: () => ShellState['user'];
-  readonly getGroups: () => ShellState['groups'];
-  readonly getTheme: () => ShellState['theme'];
-  readonly subscribe: (listener: Listener) => () => void;
-  readonly subscribeUser: (listener: Listener) => () => void;
-  readonly subscribeGroups: (listener: Listener) => () => void;
-  readonly subscribeTheme: (listener: Listener) => () => void;
-  /** Commits before notification; listener failures are aggregated after all observers run. */
-  readonly update: (next: ShellState) => boolean;
-  readonly dispose: () => void;
-}
 
 function copyUser(user: ShellState['user']): ShellState['user'] {
   return user === null ? null : Object.freeze({ id: user.id, name: user.name });
@@ -97,7 +77,7 @@ export function createShellState(initial: ShellState): ShellStateStore {
       });
 
       const errors: unknown[] = [];
-      // Adapter observers receive the committed snapshot before React observers.
+      // Whole-state observers receive the committed snapshot before field observers.
       notify(observers, errors);
       if (userChanged) notify(userObservers, errors);
       if (groupsChanged) notify(groupObservers, errors);

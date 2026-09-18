@@ -187,7 +187,22 @@ export async function checkBoundaries(root) {
           fail(file, line, `${specifier}: Import only the package's declared public exports.`);
         }
       }
-      if (/^(fixtures|examples)\//.test(path.relative(root, file).split(path.sep).join('/'))) {
+      if (
+        owner.name === '@company/fixture-test-shell' &&
+        (specifier.includes('/internal') ||
+          targetName.startsWith('@module-federation/') ||
+          targetName.startsWith('@tanstack/'))
+      ) {
+        fail(
+          file,
+          line,
+          `${specifier}: The test shell must use public host, adapter, and transport APIs.`,
+        );
+      }
+      if (
+        owner.name !== '@company/fixture-test-shell' &&
+        /^(fixtures|examples)\//.test(path.relative(root, file).split(path.sep).join('/'))
+      ) {
         if (
           ['@company/mfe-core', '@company/mfe-host', '@company/mfe-legacy-angular'].includes(
             targetName,

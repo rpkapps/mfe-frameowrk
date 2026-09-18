@@ -3,8 +3,8 @@ import { act, cleanup, render, screen } from '@testing-library/react';
 import { StrictMode, useEffect } from 'react';
 import { afterEach, describe, expect, expectTypeOf, it, vi } from 'vitest';
 
-import { createShellState } from './shell-state';
-import type { ShellState, ShellStateStore } from './shell-state';
+import { createShellState } from '@company/mfe-host';
+import type { ShellState, ShellStateStore } from '@company/mfe-core';
 import { ShellStateProvider, useGroups, useTheme, useUser } from './shell-state-context';
 
 const initialState: ShellState = {

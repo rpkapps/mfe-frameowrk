@@ -1,31 +1,29 @@
-import { parseHref } from '@tanstack/history';
 import type {
+  BoundaryHistory,
+  BoundaryLocation,
+  BoundaryState,
   HistoryAction,
-  HistoryLocation,
+  HistoryNotification,
   NavigateOptions,
   NavigationBlocker,
-  ParsedHistoryState,
-  RouterHistory,
-} from '@tanstack/history';
-
-type HistoryNotification = Parameters<RouterHistory['notify']>[0];
+} from './boundary-history';
 
 interface Boundary {
   readonly basePath: string;
-  readonly history: RouterHistory;
+  readonly history: BoundaryHistory;
   readonly blockers: Set<NavigationBlocker>;
   readonly retired: Promise<true>;
   readonly retire: () => void;
-  location: HistoryLocation;
+  location: BoundaryLocation;
   disposed: boolean;
 }
 
 /**
- * Test-shell browser ownership. Routers see full browser paths, but may only
+ * Framework-neutral browser ownership. Routers see full browser paths, but may only
  * push and replace within their base path. App changes go through navigate().
  * No browser methods are replaced, and each attempt receives a fresh history.
  */
-export function createShellNavigation(win: Window) {
+export function createBrowserNavigation(win: Window): BrowserNavigation {
   const listeners = new Set<() => void>();
   const boundaries = new Set<Boundary>();
   let disposed = false;
@@ -41,22 +39,22 @@ export function createShellNavigation(win: Window) {
     cancelDecisions = () => resolve(true);
   });
 
-  function browserLocation(): HistoryLocation {
-    const state = win.history.state as ParsedHistoryState | null;
+  function browserLocation(): BoundaryLocation {
+    const state = win.history.state as BoundaryState | null;
     return parseHref(
       `${win.location.pathname}${win.location.search}${win.location.hash}`,
-      state ?? undefined,
+      state ?? stateAt(0),
     );
   }
 
-  function stateAt(index: number, state?: object): ParsedHistoryState {
+  function stateAt(index: number, state?: object): BoundaryState {
     const key = win.crypto.randomUUID();
-    return { ...state, key, __TSR_key: key, __TSR_index: index };
+    return { ...state, key, index: index };
   }
 
   // Seed only the current entry. Preserve unrelated state owned by the host.
-  const initialState = win.history.state as ParsedHistoryState | null;
-  if (!Number.isInteger(initialState?.__TSR_index)) {
+  const initialState = win.history.state as BoundaryState | null;
+  if (!Number.isInteger(initialState?.index)) {
     win.history.replaceState(stateAt(0, initialState ?? {}), '', win.location.href);
   }
   let location = browserLocation();
@@ -80,10 +78,11 @@ export function createShellNavigation(win: Window) {
   function activeBlockers() {
     return [...boundaries]
       .filter((boundary) => !boundary.disposed && contains(boundary.basePath, location.pathname))
+      .sort((left, right) => right.basePath.length - left.basePath.length)
       .flatMap((boundary) => [...boundary.blockers].map((blocker) => ({ blocker, boundary })));
   }
 
-  function commit(next: HistoryLocation, action: HistoryNotification) {
+  function commit(next: BoundaryLocation, action: HistoryNotification) {
     location = next;
     for (const boundary of boundaries) {
       if (contains(boundary.basePath, next.pathname)) {
@@ -95,7 +94,7 @@ export function createShellNavigation(win: Window) {
   }
 
   function isBlocked(
-    next: HistoryLocation,
+    next: BoundaryLocation,
     action: HistoryAction,
     ignoreBlocker = false,
   ): boolean | Promise<boolean> {
@@ -141,7 +140,7 @@ export function createShellNavigation(win: Window) {
     // clicks must not replace it or replay a stale decision after it resolves.
     if (disposed || transitionPending || restoring) return false;
     const action = options.replace ? 'REPLACE' : 'PUSH';
-    const state = stateAt(location.state.__TSR_index + (options.replace ? 0 : 1), options.state);
+    const state = stateAt(location.state.index + (options.replace ? 0 : 1), options.state);
     const next = parseHref(href, state);
     transitionPending = true;
     try {
@@ -173,10 +172,9 @@ export function createShellNavigation(win: Window) {
     }
     const next = browserLocation();
     const generation = ++popGeneration;
-    const delta = next.state.__TSR_index - location.state.__TSR_index;
+    const delta = next.state.index - location.state.index;
     const action = delta === -1 ? 'BACK' : delta === 1 ? 'FORWARD' : 'GO';
-    const options =
-      traversalOptions?.index === next.state.__TSR_index ? traversalOptions : undefined;
+    const options = traversalOptions?.index === next.state.index ? traversalOptions : undefined;
     traversalOptions = undefined;
     // Keep the existing app alive throughout the native resolver's decision.
     // A canceled pop restores the browser cursor without notifying the router.
@@ -220,15 +218,15 @@ export function createShellNavigation(win: Window) {
     }
   }
 
-  function createBoundaryHistory(basePath: string): RouterHistory {
-    if (disposed) throw new Error('The test-shell navigation has been disposed.');
+  function createBoundaryHistory(basePath: string): BoundaryHistory {
+    if (disposed) throw new Error('The browser navigation has been disposed.');
     if (basePath === '/' || basePath.endsWith('/') || pathFor(basePath) !== basePath) {
       throw new Error('An app boundary requires a normalized non-root base path.');
     }
     if (!contains(basePath, location.pathname)) {
       throw new Error(`Navigate to ${basePath} before creating its boundary history.`);
     }
-    const subscribers: RouterHistory['subscribers'] = new Set();
+    const subscribers: BoundaryHistory['subscribers'] = new Set();
     const blockers = new Set<NavigationBlocker>();
     let retire = () => {};
     const boundaryRetired = new Promise<true>((resolve) => {
@@ -245,7 +243,7 @@ export function createShellNavigation(win: Window) {
       )
         return;
       // Avoid leaving a stale bypass after a no-op back at our first entry.
-      const nextIndex = location.state.__TSR_index + delta;
+      const nextIndex = location.state.index + delta;
       if (nextIndex < 0) return;
       traversalOptions = { ...options, index: nextIndex };
       win.history.go(delta);
@@ -257,7 +255,7 @@ export function createShellNavigation(win: Window) {
         (error: unknown) => win.reportError(error),
       );
     };
-    const history: RouterHistory = {
+    const history: BoundaryHistory = {
       get location() {
         return boundary.location;
       },
@@ -274,7 +272,7 @@ export function createShellNavigation(win: Window) {
       go: traverse,
       back: (options) => traverse(-1, options),
       forward: (options) => traverse(1, options),
-      canGoBack: () => location.state.__TSR_index > 0,
+      canGoBack: () => location.state.index > 0,
       createHref: (href) => pathFor(href, basePath),
       block(blocker) {
         if (!boundary.disposed) blockers.add(blocker);
@@ -293,7 +291,7 @@ export function createShellNavigation(win: Window) {
           for (const listener of subscribers) listener({ location: boundary.location, action });
         }
       },
-      _getBlockers: () => [...blockers],
+      getBlockers: () => [...blockers],
     };
     const boundary: Boundary = {
       basePath,
@@ -329,5 +327,31 @@ export function createShellNavigation(win: Window) {
       for (const boundary of boundaries) boundary.history.destroy();
       listeners.clear();
     },
+  };
+}
+
+export interface BrowserNavigation {
+  readonly getSnapshot: () => BoundaryLocation;
+  readonly subscribe: (listener: () => void) => () => void;
+  readonly navigate: (
+    path: string,
+    options?: {
+      readonly replace?: boolean;
+      readonly state?: object;
+      readonly ignoreBlocker?: boolean;
+    },
+  ) => Promise<boolean>;
+  readonly createBoundaryHistory: (basePath: string) => BoundaryHistory;
+  readonly dispose: () => void;
+}
+
+function parseHref(href: string, state: BoundaryState): BoundaryLocation {
+  const url = new URL(href, 'https://boundary.invalid');
+  return {
+    href: `${url.pathname}${url.search}${url.hash}`,
+    pathname: url.pathname,
+    search: url.search,
+    hash: url.hash,
+    state,
   };
 }

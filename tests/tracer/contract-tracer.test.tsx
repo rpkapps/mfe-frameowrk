@@ -87,7 +87,7 @@ function mountDefinition(definition: AppDefinition<AnyRouter>) {
     reportError,
   });
   mounts.push(mount);
-  return { ...mount, reportError };
+  return Object.assign(mount, { reportError });
 }
 
 beforeEach(() => {

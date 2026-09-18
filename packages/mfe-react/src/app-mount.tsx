@@ -6,13 +6,13 @@ import { Component } from 'react';
 import type { PropsWithChildren } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
-import type { MfeError } from '@company/mfe-core';
-import { createMountLifecycle } from '@company/mfe-host/internal';
+import type { MfeError, ShellState } from '@company/mfe-core';
+import { createAppRuntime, untilAttemptRetires } from '@company/mfe-host';
+import type { AppAdapterOptions, AppDriver, MountAttempt } from '@company/mfe-host';
 import type { AppDefinition } from './index';
 import type { MfeRouterContext } from './router-context';
 import { createContextValidator, invalidRouter } from './reserved-context';
-import { createShellState } from './shell-state';
-import type { ShellState } from './shell-state';
+import { createNavigationHistory } from './navigation-history';
 import { ShellStateProvider } from '@company/mfe-react/internal/shell-state-context';
 
 class MountErrorBoundary extends Component<
@@ -41,29 +41,24 @@ interface AppMountOptions {
   readonly reportError: (error: MfeError) => void;
 }
 
-/** Native navigation may await presentation after disposal removes that tree. */
-function untilAttemptRetires(work: Promise<void>, signal: AbortSignal): Promise<void> {
-  let onAbort = () => {};
-  const retired = new Promise<void>((resolve) => {
-    onAbort = resolve;
-    if (signal.aborted) resolve();
-    else signal.addEventListener('abort', onAbort, { once: true });
-  });
-  // Promise.race observes the original work even if retirement wins; late errors
-  // cannot become unhandled or fail a subsequent attempt.
-  return Promise.race([work, retired]).finally(() => signal.removeEventListener('abort', onAbort));
-}
-
-/**
- * Adapter-internal activation of an already-loaded definition. Loading by ID
- * belongs to the host; tests supply an in-process loader outside this module.
- */
-export function createAppMount(options: AppMountOptions) {
-  const { definition } = options;
-  const placement = document.createElement('div');
-  options.target.append(placement);
-  const shellState = createShellState(options.shellState);
-  const queryClient = new QueryClient();
+/** React resources only; the host owns lifecycle, placement and shell state. */
+export function createReactDriver(
+  options: AppAdapterOptions,
+  createHistory?: () => RouterHistory,
+  queryClient = new QueryClient(),
+) {
+  const candidate = options.definition;
+  if (
+    typeof candidate !== 'object' ||
+    candidate === null ||
+    !('router' in candidate) ||
+    typeof candidate.router !== 'function'
+  ) {
+    throw new Error(`React App ${options.id} must provide a router factory.`);
+  }
+  // The host validates common descriptor fields before selecting this adapter.
+  const definition = candidate as AppDefinition<AnyRouter>;
+  const { placement, shellState } = options;
   let activeRouter: AnyRouter | undefined;
   let activeAttemptSignal: AbortSignal | undefined;
   let failActiveAttempt: ((cause: unknown) => void) | undefined;
@@ -72,25 +67,25 @@ export function createAppMount(options: AppMountOptions) {
   let sessionGeneration = 0;
   let disposed = false;
 
-  const lifecycle = createMountLifecycle({
-    definition,
-    reportError: options.reportError,
+  const driver = {
     detach() {
       disposed = true;
       sessionGeneration++;
-      shellState.dispose();
-      placement.remove();
     },
-    async cleanup() {
+    async dispose() {
       await queryClient.cancelQueries();
       queryClient.clear();
     },
-    async mount(attempt) {
-      const history = options.createHistory();
+    async mount(attempt: MountAttempt) {
+      const history = createHistory
+        ? createHistory()
+        : createNavigationHistory(requireNavigation());
       // This history belongs exclusively to this attempt. Native memory-history
       // destroy does not remove subscribers, and root cleanup happens later.
-      attempt.onDetach(() => history.subscribers.clear());
-      attempt.onCleanup(() => history.destroy());
+      attempt.onDetach(() => {
+        history.subscribers.clear();
+        history.destroy();
+      });
       attempt.onCleanup(async () => {
         await queryClient.cancelQueries();
         queryClient.clear();
@@ -206,7 +201,12 @@ export function createAppMount(options: AppMountOptions) {
         });
       });
     },
-  });
+  } satisfies AppDriver;
+
+  function requireNavigation() {
+    if (!options.createNavigation) throw new Error('React App requires a navigation boundary.');
+    return options.createNavigation();
+  }
 
   async function updateShellState(next: ShellState): Promise<void> {
     if (disposed) return;
@@ -274,12 +274,49 @@ export function createAppMount(options: AppMountOptions) {
   }
 
   return {
-    ...lifecycle,
+    ...driver,
     placement,
     queryClient,
     updateShellState,
     /** Internal bridge/diagnostic access; not exported from the author facade. */
     getRouter: () => activeRouter,
     getRootCount: () => rootCount,
+  };
+}
+
+/** Internal native-history harness; production and tests use the same host lifecycle. */
+export function createAppMount(options: AppMountOptions) {
+  const queryClient = new QueryClient();
+  let driver: ReturnType<typeof createReactDriver> | undefined;
+  const runtime = createAppRuntime({
+    registry: [
+      {
+        id: options.definition.id,
+        adapter: 'react',
+        load: () => Promise.resolve(options.definition),
+      },
+    ],
+    adapters: [
+      {
+        id: 'react',
+        create(context) {
+          driver = createReactDriver(context, options.createHistory, queryClient);
+          return driver;
+        },
+      },
+    ],
+    reportError: options.reportError,
+  });
+  const mount = runtime.mountApp({
+    id: options.definition.id,
+    basePath: options.basePath,
+    target: options.target,
+    shellState: options.shellState,
+  });
+  return {
+    ...mount,
+    queryClient,
+    getRouter: () => driver?.getRouter(),
+    getRootCount: () => driver?.getRootCount() ?? 0,
   };
 }

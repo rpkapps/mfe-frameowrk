@@ -1,9 +1,11 @@
 // @vitest-environment jsdom
+import type { BlockerFnArgs } from '@tanstack/history';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import type { BlockerFnArgs, RouterHistory } from '@tanstack/history';
-import { createShellNavigation } from '../fixtures/test-shell/src/browser-boundary';
+import type { BlockerArgs, BoundaryHistory } from '@company/mfe-host';
+import { createBrowserNavigation } from '@company/mfe-host';
+import { createNavigationHistory } from '@company/mfe-react/internal';
 
-let navigation: ReturnType<typeof createShellNavigation>;
+let navigation: ReturnType<typeof createBrowserNavigation>;
 let originalHistoryDescriptors: Record<string, PropertyDescriptor>;
 
 beforeEach(() => {
@@ -13,7 +15,7 @@ beforeEach(() => {
     '/discovery/project?view=list#decisions',
   );
   originalHistoryDescriptors = Object.getOwnPropertyDescriptors(window.history);
-  navigation = createShellNavigation(window);
+  navigation = createBrowserNavigation(window);
 });
 
 afterEach(() => navigation.dispose());
@@ -39,7 +41,7 @@ describe('test-shell browser boundaries', () => {
   it('starts at deep links and preserves browser state without patching browser methods', () => {
     const history = navigation.createBoundaryHistory('/discovery');
     expect(history.location.href).toBe('/discovery/project?view=list#decisions');
-    expect(history.location.state).toMatchObject({ existing: 'preserved', __TSR_index: 0 });
+    expect(history.location.state).toMatchObject({ existing: 'preserved', index: 0 });
     expect(history.location).toBe(navigation.getSnapshot());
     navigation.dispose();
     expect(Object.getOwnPropertyDescriptors(window.history)).toEqual(originalHistoryDescriptors);
@@ -59,7 +61,7 @@ describe('test-shell browser boundaries', () => {
     const length = window.history.length;
     history.replace('/discovery/team?member=ab', { selected: 'ab' });
     expect(window.history.length).toBe(length);
-    expect(history.location.state).toMatchObject({ selected: 'ab', __TSR_index: 1 });
+    expect(history.location.state).toMatchObject({ selected: 'ab', index: 1 });
     expect(remote).toHaveBeenLastCalledWith({
       location: history.location,
       action: { type: 'REPLACE' },
@@ -136,7 +138,7 @@ describe('test-shell browser boundaries', () => {
   it('keeps the app mounted during shell exits and commits one native proceed decision', async () => {
     const history = navigation.createBoundaryHistory('/discovery');
     const decision = deferred<boolean>();
-    const blocker = vi.fn<(args: BlockerFnArgs) => Promise<boolean>>(() => decision.promise);
+    const blocker = vi.fn<(args: BlockerArgs) => Promise<boolean>>(() => decision.promise);
     history.block({ blockerFn: blocker });
     const result = navigation.navigate('/geology/map');
     expect(navigation.getSnapshot().pathname).toBe('/discovery/project');
@@ -166,7 +168,7 @@ describe('test-shell browser boundaries', () => {
     history.push('/discovery/team');
     const listener = vi.fn();
     history.subscribe(listener);
-    const blocker = vi.fn<(args: BlockerFnArgs) => boolean>(() => true);
+    const blocker = vi.fn<(args: BlockerArgs) => boolean>(() => true);
     const unblock = history.block({ blockerFn: blocker });
     window.history.back();
     await vi.waitFor(() => expect(blocker).toHaveBeenCalledTimes(1));
@@ -186,7 +188,7 @@ describe('test-shell browser boundaries', () => {
     await navigation.navigate('/geology/map');
     const history = navigation.createBoundaryHistory('/geology');
     const decision = deferred<boolean>();
-    const blocker = vi.fn<(args: BlockerFnArgs) => Promise<boolean>>(() => decision.promise);
+    const blocker = vi.fn<(args: BlockerArgs) => Promise<boolean>>(() => decision.promise);
     history.block({ blockerFn: blocker });
     window.history.back();
     await vi.waitFor(() => expect(blocker).toHaveBeenCalledTimes(1));
@@ -246,7 +248,7 @@ describe('test-shell browser boundaries', () => {
   });
 
   it('does not commit a remote decision after that attempt history is destroyed', async () => {
-    const history: RouterHistory = navigation.createBoundaryHistory('/discovery');
+    const history: BoundaryHistory = navigation.createBoundaryHistory('/discovery');
     const decision = deferred<boolean>();
     history.block({ blockerFn: () => decision.promise });
     history.push('/discovery/team');
@@ -255,5 +257,73 @@ describe('test-shell browser boundaries', () => {
     await Promise.resolve();
     await Promise.resolve();
     expect(window.location.pathname).toBe('/discovery/project');
+  });
+});
+
+describe('native adapter history translation', () => {
+  it('adds native entry fields only at the adapter boundary and preserves notifications', () => {
+    const boundary = navigation.createBoundaryHistory('/discovery');
+    const history = createNavigationHistory(boundary);
+    expect(history.location).toBe(history.location);
+    expect(history.location.state).toMatchObject({
+      __TSR_index: 0,
+      __TSR_key: boundary.location.state.key,
+    });
+    const listener = vi.fn();
+    history.subscribe(listener);
+    history.push('/discovery/team', { selected: 'se', __TSR_index: 99, __TSR_key: 'forged' });
+    expect(history.location.state).toMatchObject({
+      selected: 'se',
+      __TSR_index: 1,
+      __TSR_key: boundary.location.state.key,
+    });
+    expect(boundary.location.state).not.toHaveProperty('__TSR_index');
+    expect(window.history.state).not.toHaveProperty('__TSR_key');
+    expect(listener).toHaveBeenCalledExactlyOnceWith({
+      location: history.location,
+      action: { type: 'PUSH' },
+    });
+    history.destroy();
+    history.push('/discovery/retired');
+    expect(navigation.getSnapshot().pathname).toBe('/discovery/team');
+    expect(boundary.subscribers.size).toBe(0);
+  });
+
+  it('translates blocker locations and retires a pending native exit', async () => {
+    const history = createNavigationHistory(navigation.createBoundaryHistory('/discovery'));
+    const decision = deferred<boolean>();
+    const blocker = vi.fn<(args: BlockerFnArgs) => Promise<boolean>>(() => decision.promise);
+    history.block({ blockerFn: blocker });
+    const exit = navigation.navigate('/geology');
+    const args = blocker.mock.calls[0]?.[0];
+    expect(args?.currentLocation).toBe(history.location);
+    expect(args?.nextLocation.pathname).toBe('/geology');
+    expect(args?.nextLocation.state.__TSR_index).toBe(1);
+    expect(args?.action).toBe('PUSH');
+    history.destroy();
+    expect(await exit).toBe(false);
+    expect(history._getBlockers()).toEqual([]);
+    decision.resolve(false);
+    expect(window.location.pathname).toBe('/discovery/project');
+  });
+
+  it('evaluates nested boundaries innermost first and stops at a rejection', async () => {
+    const outer = navigation.createBoundaryHistory('/discovery');
+    const inner = navigation.createBoundaryHistory('/discovery/project');
+    const calls: string[] = [];
+    outer.block({
+      blockerFn: () => {
+        calls.push('outer');
+        return false;
+      },
+    });
+    inner.block({
+      blockerFn: () => {
+        calls.push('inner');
+        return true;
+      },
+    });
+    expect(await navigation.navigate('/geology')).toBe(false);
+    expect(calls).toEqual(['inner']);
   });
 });

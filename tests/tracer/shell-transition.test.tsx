@@ -122,7 +122,7 @@ function createQueryFixture(component: RouteComponent) {
     reportError,
   });
   mounts.push(mount);
-  return { ...mount, reportError };
+  return Object.assign(mount, { reportError });
 }
 
 function createFixture(
@@ -164,7 +164,7 @@ function createFixture(
     reportError,
   });
   mounts.push(mount);
-  return { ...mount, beforeLoad, loader, factory, reportError, onMount, onUnmount };
+  return Object.assign(mount, { beforeLoad, loader, factory, reportError, onMount, onUnmount });
 }
 
 async function startTransition(

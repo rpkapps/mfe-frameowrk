@@ -37,3 +37,6 @@ export function createApp<TRouter extends AnyRouter>(
   }
   return Object.freeze({ ...options, kind: 'app' });
 }
+
+export { AppHost, createReactAdapter } from './app-host';
+export type { AppHostProps } from './app-host';

@@ -325,18 +325,15 @@ importers:
 
   fixtures/test-shell:
     dependencies:
+      '@company/mfe-host':
+        specifier: workspace:*
+        version: link:../../packages/mfe-host
+      '@company/mfe-rspack':
+        specifier: workspace:*
+        version: link:../../packages/mfe-rspack
       '@company/mfe-react':
         specifier: workspace:*
         version: link:../../packages/mfe-react
-      '@module-federation/enhanced':
-        specifier: 2.9.0
-        version: 2.9.0(@rspack/core@2.2.6(@module-federation/runtime-tools@2.9.0)(@swc/helpers@0.5.23))(typescript@5.9.3)
-      '@tanstack/history':
-        specifier: 1.162.4
-        version: 1.162.4
-      '@tanstack/react-router':
-        specifier: 1.170.38
-        version: 1.170.38(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@tecton/react':
         specifier: file:../../vendor/tecton-react
         version: file:vendor/tecton-react(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(tailwindcss@4.3.3)

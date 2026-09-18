@@ -1,7 +1,7 @@
 import { createContext, useContext, useMemo, useSyncExternalStore } from 'react';
 import type { ReactNode } from 'react';
 
-import type { ShellState, ShellStateStore } from './shell-state';
+import type { ShellState, ShellStateStore } from '@company/mfe-core';
 
 const ShellStateContext = createContext<ShellStateStore | null>(null);
 

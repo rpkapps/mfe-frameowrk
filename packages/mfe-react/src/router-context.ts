@@ -1,5 +1,5 @@
 import type { QueryClient } from '@tanstack/react-query';
-import type { ShellState } from './shell-state';
+import type { ShellState } from '@company/mfe-core';
 
 /**
  * Route callbacks receive an immutable snapshot for their native load. Components needing
