@@ -1,4 +1,4 @@
-import { createRemoteRegistry } from '@company/mfe-rspack/runtime';
+import { createRemoteRegistry } from '@company/mfe-rsbuild/runtime';
 
 export const overrideKey = 'mfe.test-shell.overrides';
 export const overrideWarnings: string[] = [];

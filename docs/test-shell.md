@@ -9,7 +9,7 @@ pnpm dev
 
 Open http://localhost:4100. The shell owns the header and mounts one App below it. Discovery is available at `/discovery/` and `/discovery/framing`; Geology is at `/geology/`. Native app links, browser Back/Forward, and refreshing a deep link preserve the URL boundary. The app finder, Ctrl/Cmd+K palette, and `g d` / `g m` shortcuts switch Apps. Theme changes flow through the existing adapter subscriptions.
 
-The shell and each remote have separate Rspack compilers and ports. `pnpm dev:shell`, `pnpm dev:remotes`, `pnpm dev:discovery`, and `pnpm dev:geology` support working on a subset. Ports 4100–4102 are fixed so the registry, CORS policy, and browser tests agree; the launcher reports an occupied port before starting any selected server. Ctrl+C stops the selected servers and compilers. Run commands from the repository root.
+The shell and each remote have separate Rsbuild compilers and ports. Rsbuild uses the Rspack engine underneath, so the build output and MF2 integration retain their existing engine semantics. `pnpm dev:shell`, `pnpm dev:remotes`, `pnpm dev:discovery`, and `pnpm dev:geology` support working on a subset. Ports 4100–4102 are fixed so the registry, CORS policy, and browser tests agree; the launcher reports an occupied port before starting any selected server. Ctrl+C stops the selected servers and compilers. Run commands from the repository root.
 
 `pnpm generate` creates editor route types without starting a server. Both Apps have independent TypeScript programs so their native Router registration cannot collide. `pnpm typecheck` checks all programs. A new sample App uses its own fixture directory, `src/mfe.ts`, native routes, and an entry in `scripts/test-app-config.mjs` plus the test shell registry; this is intentionally a small local catalogue, not the later production registry API.
 
@@ -49,15 +49,15 @@ This shell uses a fixed test persona and sample project data. It provides a deve
 
 ## Runtime ownership
 
-The shell uses public `createAppRuntime`/`createBrowserNavigation` from `mfe-host`, `AppHost`/`createReactAdapter` from `mfe-react`, and transport helpers from `mfe-rspack/runtime`. Its catalogue supplies IDs, adapter names and URLs; the host selects adapters from a table.
+The shell uses public `createAppRuntime`/`createBrowserNavigation` from `mfe-host`, `AppHost`/`createReactAdapter` from `mfe-react`, and transport helpers from the private `@company/mfe-rsbuild/runtime` implementation surface. Its catalogue supplies IDs, adapter names and URLs; the host selects adapters from a table.
 
-| Package              | Responsibility                                                                                                                           |
-| -------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
-| `mfe-core`           | Shared shell-state and lifecycle contracts, descriptors and errors                                                                       |
-| `mfe-host`           | Registry validation, loader coordination, retry and cancellation, placement, shell-state store, browser boundary navigation and disposal |
-| `mfe-react`          | React binding/rendering/hooks, native TanStack history translation, Router context and Query session transitions                         |
-| `mfe-rspack/runtime` | MF2 remote loading/cache reset, URL override validation and development rebuild watching                                                 |
-| Test shell           | Header, app destinations, shell inputs, theme persistence and loading/error presentation                                                 |
+| Package               | Responsibility                                                                                                                           |
+| --------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- |
+| `mfe-core`            | Shared shell-state and lifecycle contracts, descriptors and errors                                                                       |
+| `mfe-host`            | Registry validation, loader coordination, retry and cancellation, placement, shell-state store, browser boundary navigation and disposal |
+| `mfe-react`           | React binding/rendering/hooks, native TanStack history translation, Router context and Query session transitions                         |
+| `mfe-rsbuild/runtime` | MF2 remote loading/cache reset, URL override validation and development rebuild watching                                                 |
+| Test shell            | Header, app destinations, shell inputs, theme persistence and loading/error presentation                                                 |
 
 A future Angular adapter implements `AppAdapter.create` and returns an `AppDriver`. The host supplies the neutral definition, placement, shell-state store and navigation factory. Each `mount(attempt)` registers acquired resources immediately using `onDetach` and `onCleanup`, and checks `isCurrent` after awaiting work. A driver may implement `updateShellState` when its router/data layer needs coordinated session invalidation. The host otherwise updates the shared store directly. Mount-level `detach` and `dispose` release adapter resources retained across retries.
 

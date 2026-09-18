@@ -1,7 +1,7 @@
 import { createServer } from 'node:net';
-import { rspack } from '@rspack/core';
-import { RspackDevServer } from '@rspack/dev-server';
-import { applications, configuration } from './test-app-config.mjs';
+import { join } from 'node:path';
+import { createRsbuild } from '@rsbuild/core';
+import { applications, configuration, workspace } from './test-app-config.mjs';
 import './generate.mjs';
 
 const selection = process.argv[2] ?? 'all';
@@ -26,27 +26,16 @@ async function assertPortAvailable(port) {
 await Promise.all(selected.map((app) => assertPortAvailable(app.port)));
 
 const running = [];
-let starts = [];
+const starts = [];
 let shutdown;
+async function finish() {
+  await Promise.allSettled(starts);
+  const results = await Promise.allSettled(running.map(({ server }) => server.close()));
+  for (const result of results) if (result.status === 'rejected') console.error(result.reason);
+}
 function stop() {
   shutdown ??= finish();
   return shutdown;
-}
-async function finish() {
-  await Promise.allSettled(starts);
-  const results = await Promise.allSettled(
-    running.map(async ({ server, compiler, clients }) => {
-      for (const client of clients) client.end();
-      try {
-        await server.stop();
-      } finally {
-        await new Promise((resolve, reject) =>
-          compiler.close((error) => (error ? reject(error) : resolve())),
-        );
-      }
-    }),
-  );
-  for (const result of results) if (result.status === 'rejected') console.error(result.reason);
 }
 for (const signal of ['SIGINT', 'SIGTERM'])
   process.once(signal, () => {
@@ -62,54 +51,19 @@ for (const signal of ['SIGINT', 'SIGTERM'])
   });
 
 try {
-  starts = selected.map(async (app) => {
-    const compiler = rspack(configuration(app));
-    const clients = new Set();
-    let hash;
-    compiler.hooks.done.tap('TestShellReload', (stats) => {
-      if (stats.hasErrors()) return;
-      hash = stats.hash;
-      for (const client of clients) client.write(`data: ${hash}\n\n`);
-    });
-    const server = new RspackDevServer(
-      {
-        host: 'localhost',
-        port: app.port,
-        setupExitSignals: false,
-        hot: false,
-        liveReload: app.id === 'shell',
-        client: app.id === 'shell' ? { overlay: true } : false,
-        headers: { 'Access-Control-Allow-Origin': 'http://localhost:4100' },
-        historyApiFallback: app.id === 'shell',
-        static: false,
-        setupMiddlewares(middlewares) {
-          const headers = middlewares.findIndex((middleware) => middleware.name === 'set-headers');
-          middlewares.splice(headers + 1, 0, {
-            name: 'remote-rebuild-events',
-            path: '/__mfe_events',
-            middleware: (request, response) => {
-              response.writeHead(200, {
-                'Content-Type': 'text/event-stream',
-                'Cache-Control': 'no-cache',
-                'Access-Control-Allow-Origin': 'http://localhost:4100',
-                Connection: 'keep-alive',
-              });
-              if (hash) response.write(`data: ${hash}\n\n`);
-              clients.add(response);
-              request.on('close', () => clients.delete(response));
-            },
-          });
-          return middlewares;
-        },
-      },
-      compiler,
-    );
-    running.push({ server, compiler, clients });
-    await server.start();
-    console.log(
-      `${app.id.padEnd(10)} http://localhost:${app.port}/${app.id === 'shell' ? '' : 'mf-manifest.json'}`,
-    );
-  });
+  starts.push(
+    ...selected.map(async (app) => {
+      const rsbuild = await createRsbuild({
+        cwd: join(workspace, 'fixtures', app.directory),
+        rsbuildConfig: configuration(app),
+      });
+      const server = await rsbuild.startDevServer();
+      running.push({ server });
+      console.log(
+        `${app.id.padEnd(10)} http://localhost:${app.port}/${app.id === 'shell' ? '' : 'mf-manifest.json'}`,
+      );
+    }),
+  );
   await Promise.all(starts);
   if (!shutdown)
     console.log(

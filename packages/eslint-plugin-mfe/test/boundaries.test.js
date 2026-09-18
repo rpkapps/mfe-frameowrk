@@ -37,7 +37,7 @@ describe('runtime import DAG', () => {
     ['@company/mfe-core', '@tanstack/history'],
     ['@company/mfe-host', '@tanstack/react-router'],
     ['@company/mfe-host', '@module-federation/enhanced/runtime'],
-    ['@company/mfe-react', '@company/mfe-rspack'],
+    ['@company/mfe-react', '@company/mfe-rsbuild'],
     ['@company/mfe-core', '@company/mfe-host'],
     ['@company/mfe-react', '@company/mfe-legacy-angular'],
     ['@company/mfe-react', 'single-spa'],

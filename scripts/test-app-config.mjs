@@ -1,10 +1,52 @@
 import { fileURLToPath } from 'node:url';
 import { join } from 'node:path';
-import { HtmlRspackPlugin } from '@rspack/core';
-import { ModuleFederationPlugin } from '@module-federation/enhanced/rspack';
-import { mfePlugin, reactBuild, sharedDependencies } from '@company/mfe-rspack';
+import { pluginModuleFederation } from '@module-federation/rsbuild-plugin';
+import { mfePlugin, sharedDependencies, sharedReactPlugin } from '@company/mfe-rsbuild';
 
 export const workspace = fileURLToPath(new URL('../', import.meta.url));
+function remoteReloadPlugin() {
+  const clients = new Set();
+  let hash;
+  return {
+    name: 'test-remote-reload-events',
+    setup(api) {
+      api.onAfterDevCompile(({ stats }) => {
+        if (stats.hasErrors()) return;
+        hash = stats.hash;
+        for (const client of clients) client.write(`data: ${hash}\n\n`);
+      });
+      api.modifyRsbuildConfig((config) => ({
+        ...config,
+        server: {
+          ...config.server,
+          setup({ server }) {
+            server.middlewares.use('/__mfe_events', (request, response, next) => {
+              if (request.method !== 'GET') return next();
+              response.writeHead(200, {
+                'Content-Type': 'text/event-stream',
+                'Cache-Control': 'no-cache',
+                'Access-Control-Allow-Origin': 'http://localhost:4100',
+                Connection: 'keep-alive',
+              });
+              if (hash) response.write(`data: ${hash}\n\n`);
+              clients.add(response);
+              request.on('close', () => clients.delete(response));
+            });
+            return () => {
+              for (const client of clients) client.end();
+              clients.clear();
+            };
+          },
+        },
+      }));
+      api.onCloseDevServer(() => {
+        for (const client of clients) client.end();
+        clients.clear();
+      });
+    },
+  };
+}
+
 export const applications = [
   { id: 'discovery', directory: 'discovery-app', port: 4101 },
   { id: 'geology', directory: 'geology-app', port: 4102 },
@@ -15,37 +57,35 @@ export function configuration(app, mode = 'development') {
   const root = join(workspace, 'fixtures', app.directory);
   const shell = app.id === 'shell';
   return {
-    name: app.id,
     mode,
-    context: root,
-    target: 'web',
-    entry: shell ? './src/main.ts' : {},
-    devtool: 'source-map',
+    source: { entry: shell ? { index: './src/main.ts' } : {} },
     output: {
-      path: join(root, 'dist'),
-      publicPath: `http://localhost:${app.port}/`,
-      uniqueName: `test_${app.id}`,
-      filename: '[name].js',
-      chunkFilename: '[name].[contenthash:8].js',
-      clean: true,
+      distPath: { root: join(root, 'dist') },
+      assetPrefix: `http://localhost:${app.port}/`,
+      cleanDistPath: true,
+      sourceMap: { js: 'source-map' },
+      minify: mode === 'production',
     },
     resolve: { extensions: ['.tsx', '.ts', '.jsx', '.js', '.mjs'] },
-    module: { rules: shell ? reactBuild({ root }) : [] },
-    optimization: { minimize: mode === 'production' },
+    server: {
+      port: app.port,
+      host: 'localhost',
+      cors: { origin: 'http://localhost:4100' },
+      historyApiFallback: shell,
+      strictPort: true,
+    },
+    dev: { hmr: false, liveReload: shell },
+    html: shell ? { template: join(root, 'index.html') } : undefined,
     plugins: shell
       ? [
-          new ModuleFederationPlugin({
+          sharedReactPlugin({ root }),
+          pluginModuleFederation({
             name: 'test_shell',
+            filename: 'remoteEntry.js',
             shared: sharedDependencies(),
             dts: false,
           }),
-          new HtmlRspackPlugin({
-            title: 'Tecton · MFE test shell',
-            templateContent:
-              '<!doctype html><html lang="en" class="dark"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Tecton · MFE test shell</title></head><body><div id="root"></div></body></html>',
-          }),
         ]
-      : [mfePlugin({ name: app.id, root })],
-    stats: 'errors-warnings',
+      : [mfePlugin({ name: app.id, root }), remoteReloadPlugin()],
   };
 }

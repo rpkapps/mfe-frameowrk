@@ -50,6 +50,15 @@ describe('composable flat presets', () => {
     }
   });
 
+  it('allows the public Rsbuild entry while keeping MF2 subpaths private', async () => {
+    expect(
+      await lint('author', 'import { mfePlugin } from "@company/mfe-rsbuild"; mfePlugin();'),
+    ).toEqual([]);
+    expect(await lint('author', 'export * from "@company/mfe-rsbuild/runtime";')).toContainEqual(
+      expect.objectContaining({ ruleId: 'no-restricted-imports' }),
+    );
+  });
+
   it('allows the documented test-only export', async () => {
     expect(
       await lint(

@@ -211,7 +211,7 @@ export async function checkBoundaries(root) {
           fail(
             file,
             line,
-            `${specifier}: Author fixtures use @company/mfe-react and @company/mfe-rspack public exports.`,
+            `${specifier}: Author fixtures use @company/mfe-react and @company/mfe-rsbuild public exports.`,
           );
         }
         if (vendorPackage(targetName))

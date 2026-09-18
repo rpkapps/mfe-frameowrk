@@ -4,6 +4,12 @@ Approved on 2026-09-18 after the Gate 0 native Router and Query probes: the user
 
 This document records the two replacements applied to the supplied specification. It is the tracked companion to that source; the complete supplied specification remains excluded from the repository.
 
+## Rsbuild package surface
+
+The user approved replacing the original Rspack-facing build surface with the `@company/mfe-rsbuild` package. Its public build entry is `mfePlugin`; the native `sharedReactPlugin` supplies the shared React and CSS pipeline for shell builds. Rsbuild uses the Rspack engine underneath, so this is a package and author-facing API migration rather than a new bundler or a change to the MF2 contract. MF2 loading, manifests, sharing, and transport remain private implementation details.
+
+The package and launcher now use this contract. Validation evidence and remaining checks are recorded in [the progress record](./progress.md); Gate 1 remains open. Historical Rspack package names, versions, and test evidence below and in the feasibility records remain unchanged as historical evidence.
+
 ## Construction-time history forwarding
 
 Replace the requirement that authors omit `history` and the adapter installs it after router construction with this contract:

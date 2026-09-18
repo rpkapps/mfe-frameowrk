@@ -1,5 +1,5 @@
 {
-  "name": "@company/mfe-rspack",
+  "name": "@company/mfe-rsbuild",
   "version": "0.0.0",
   "private": true,
   "type": "module",
@@ -18,9 +18,12 @@
     "babel-loader": "10.1.1",
     "babel-plugin-react-compiler": "1.0.0",
     "postcss": "8.5.28",
-    "postcss-loader": "8.2.1"
+    "postcss-loader": "8.2.1",
+    "@module-federation/rsbuild-plugin": "2.9.0",
+    "@rsbuild/plugin-babel": "2.1.0",
+    "@rsbuild/plugin-react": "2.1.0"
   },
   "peerDependencies": {
-    "@rspack/core": "2.2.6"
+    "@rsbuild/core": "2.2.8"
   }
 }

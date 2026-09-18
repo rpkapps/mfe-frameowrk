@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import { createRoot } from 'react-dom/client';
 import { createAppRuntime, createBrowserNavigation } from '@company/mfe-host';
 import { AppHost, createReactAdapter } from '@company/mfe-react';
-import { watchRemoteUpdates } from '@company/mfe-rspack/runtime';
+import { watchRemoteUpdates } from '@company/mfe-rsbuild/runtime';
 import { registry, overrideWarnings, remotes } from './registry';
 import { TestShell, AppFailure } from './shell';
 import './global.css';

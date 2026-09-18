@@ -9,7 +9,7 @@ pnpm install --frozen-lockfile
 pnpm dev
 ```
 
-Open **http://localhost:4100**. One command generates routes and starts the shell plus both Rspack remotes. Use the app finder or **Ctrl/Cmd+K** to switch applications; **?** lists shortcuts. **Ctrl+C** stops all three servers.
+Open **http://localhost:4100**. One command generates routes and starts the shell plus both Rsbuild remotes (using the Rspack engine). Use the app finder or **Ctrl/Cmd+K** to switch applications; **?** lists shortcuts. **Ctrl+C** stops all three servers.
 
 | Command                                   | Starts                                                     |
 | ----------------------------------------- | ---------------------------------------------------------- |
