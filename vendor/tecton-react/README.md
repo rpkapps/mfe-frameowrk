@@ -1,6 +1,6 @@
 # Tecton local source artifact
 
-This private package contains the runtime import closure used by the integration shell and test Apps from [rpkapps/tecton-ui-1](https://github.com/rpkapps/tecton-ui-1), revision `424889e4ff47af48e6a8b138ad77421a5ce5014d`. It is installed through a local `file:` dependency and compiled by the consuming Rspack build. Checked-in declarations are exposed through the `types` export condition so consumers retain their own stricter TypeScript settings. It is not a published, precompiled Tecton runtime release.
+This private package contains the runtime import closure used by the integration shell and test Apps from [rpkapps/tecton-ui-1](https://github.com/rpkapps/tecton-ui-1), revision `576a766a4af5401c7f232a5f9f8460acf9e31ae6`. It is installed through a local `file:` dependency and compiled by the consuming Rspack build. Checked-in declarations are exposed through the `types` export condition so consumers retain their own stricter TypeScript settings. It is not a published, precompiled Tecton runtime release.
 
 The snapshot includes the actual `shell-01` block, `AppFinder`, `AppShell`, `PageHeader`, their component dependencies, the icon exports, and design styles. `provenance.json` records the selected entry points and SHA-256 digest of every immutable source file. The snapshot excludes the upstream documentation application, test suite, registry tooling, and unused runtime components.
 

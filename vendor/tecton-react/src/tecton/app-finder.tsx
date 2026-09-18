@@ -12,6 +12,7 @@ import {
 import { CheckIcon, ChevronDownIcon, SearchXIcon } from "lucide-react"
 
 import { Button } from "@tecton/react/components/button"
+import { usePortalTarget } from "@tecton/react/tecton/portal"
 import {
   Command,
   CommandEmpty,
@@ -157,6 +158,7 @@ function AppFinderMenu({
   "aria-label": ariaLabel = "Applications",
   ...props
 }: AppFinderMenuProps) {
+  const portalTarget = usePortalTarget()
   return (
     <PopoverPrimitive
       data-slot="app-finder-menu"
@@ -167,6 +169,7 @@ function AppFinderMenu({
         className
       )}
       {...props}
+      UNSTABLE_portalContainer={portalTarget}
     >
       <DialogPrimitive aria-label={ariaLabel} className="outline-none">
         {({ close }) => (

@@ -104,6 +104,48 @@ afterEach(async () => {
 });
 
 describe('Gate 0 adapter contract tracer', () => {
+  it('isolates two mounts that share one generated-style route tree', async () => {
+    const root = createRootRouteWithContext<AuthorContext>()({ component: Outlet });
+    const index = createRoute({ getParentRoute: () => root, path: '/', component: ContextView });
+    const sharedTree = root.addChildren([index]);
+    const factory = vi.fn((options: AppRouterOptions) =>
+      createRouter({
+        routeTree: sharedTree,
+        basepath: options.basePath,
+        history: options.history,
+        context: { ...options.context, authorService: 'shared-tree' },
+        defaultPendingMinMs: 0,
+      }),
+    );
+    const definition = createApp({ id: 'shared-tree', router: factory });
+    const first = createTracerMount({
+      definitions: new Map([[definition.id, definition]]),
+      id: definition.id,
+      basePath: '/first',
+      target: document.body,
+      reportError: vi.fn(),
+    });
+    const second = createTracerMount({
+      definitions: new Map([[definition.id, definition]]),
+      id: definition.id,
+      basePath: '/second',
+      target: document.body,
+      reportError: vi.fn(),
+    });
+    mounts.push(first, second);
+    await act(async () => Promise.all([first.start(), second.start()]));
+    expect(factory).toHaveBeenCalledTimes(2);
+    expect(first.getRouter()).not.toBe(second.getRouter());
+    expect(first.getRouter()?.options.history).not.toBe(second.getRouter()?.options.history);
+    expect(first.getRouter()?.options.context).not.toBe(second.getRouter()?.options.context);
+    expect(first.getRouter()?.state.location.pathname).toBe('/');
+    expect(second.getRouter()?.state.location.pathname).toBe('/');
+    await first.handle.dispose();
+    expect(first.getRouter()).toBeUndefined();
+    expect(second.getRouter()?.state.status).toBe('idle');
+    expect(second.getRootCount()).toBe(1);
+  });
+
   it('loads by stable id, renders native context, and disposes the actual React root', async () => {
     const factory = vi.fn(makeRouter);
     const definition = createApp({ id: 'tracer', version: '0.0.1', router: factory });

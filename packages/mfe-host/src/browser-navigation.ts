@@ -176,26 +176,60 @@ export function createBrowserNavigation(win: Window): BrowserNavigation {
     const action = delta === -1 ? 'BACK' : delta === 1 ? 'FORWARD' : 'GO';
     const options = traversalOptions?.index === next.state.index ? traversalOptions : undefined;
     traversalOptions = undefined;
+
+    // An accepted native traversal is replayed with this bypass, after the
+    // original cursor has been restored. This keeps the commit at the final
+    // browser entry and prevents the blocker from running twice.
+    if (options?.ignoreBlocker && transitionPending === false) {
+      commit(next, action === 'GO' ? { type: action, index: delta } : { type: action });
+      return;
+    }
+
     // Keep the existing app alive throughout the native resolver's decision.
     // A canceled pop restores the browser cursor without notifying the router.
     if (transitionPending) {
-      restoreCursor(delta);
+      const restore = getRestore();
+      if (restore) {
+        await restore;
+        if (!disposed) restoreCursor(browserLocation().state.index - location.state.index);
+      } else {
+        restoreCursor(delta);
+      }
       return;
     }
     transitionPending = true;
     try {
+      const hasBlocker = !options?.ignoreBlocker && activeBlockers().length > 0;
+      if (!hasBlocker) {
+        if (!disposed) {
+          commit(next, action === 'GO' ? { type: action, index: delta } : { type: action });
+        }
+        return;
+      }
+
+      // Native history has already moved. Put the browser cursor back before
+      // invoking an asynchronous blocker so its dialog and the app agree on
+      // the current URL while the decision is pending.
+      restoreCursor(delta);
+      const restore = getRestore();
+      if (restore) await restore;
+
       const blocked = isBlocked(next, action, options?.ignoreBlocker);
       const canceled = typeof blocked === 'boolean' ? blocked : await blocked;
       if (disposed || generation !== popGeneration) return;
       if (canceled) {
-        restoreCursor(delta);
         return;
       }
       if (!disposed) {
-        commit(next, action === 'GO' ? { type: action, index: delta } : { type: action });
+        traversalOptions = { index: next.state.index, ignoreBlocker: true };
+        if (delta) win.history.go(delta);
+        else commit(next, action === 'GO' ? { type: action, index: delta } : { type: action });
       }
     } catch (error) {
-      if (!disposed) restoreCursor(delta);
+      if (!disposed) {
+        const currentDelta = browserLocation().state.index - location.state.index;
+        restoreCursor(currentDelta);
+      }
       throw error;
     } finally {
       transitionPending = false;

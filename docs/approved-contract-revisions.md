@@ -2,13 +2,23 @@
 
 Approved on 2026-09-18 after the Gate 0 native Router and Query probes: the user explicitly approved forwarding framework-provided history into the App router factory and using `useUser`, `useGroups`, and `useTheme` for live UI shell state, with native context snapshots for route callbacks. These are contract changes, not claims that an implementation gate has passed. All other requirements and gate ordering remain in force.
 
-This document records the two replacements applied to the supplied specification. It is the tracked companion to that source; the complete supplied specification remains excluded from the repository.
+This document records the approved revisions applied to the supplied specification. It is the tracked companion to that source; the complete supplied specification remains excluded from the repository.
+
+## Tracing deferral — approved 2026-09-18
+
+Tracing is removed from the current Gate 1 exit requirement and deferred. The original Gate 1
+item 11 no longer blocks the remaining Gate 1 work. A later dedicated tracing gate must review
+and prove the framework-owned tracing contract before provider or full telemetry integration is
+accepted. This revision does not set a deadline, authorize a new public carrier or tracing API,
+or promise automatic parentage for arbitrary author functions across `await`. The existing
+`startSpan`/`startActiveSpan` semantics and standard `#mfe/fetch` signature remain unchanged
+until that dedicated gate revisits them.
 
 ## Rsbuild package surface
 
 The user approved replacing the original Rspack-facing build surface with the `@company/mfe-rsbuild` package. Its public build entry is `mfePlugin`; the native `sharedReactPlugin` supplies the shared React and CSS pipeline for shell builds. Rsbuild uses the Rspack engine underneath, so this is a package and author-facing API migration rather than a new bundler or a change to the MF2 contract. MF2 loading, manifests, sharing, and transport remain private implementation details.
 
-The package and launcher now use this contract. Validation evidence and remaining checks are recorded in [the progress record](./progress.md); Gate 1 remains open. Historical Rspack package names, versions, and test evidence below and in the feasibility records remain unchanged as historical evidence.
+The package and launcher now use this contract. Validation evidence and remaining checks are recorded in [the progress record](./progress.md); tracing is separately deferred by the approved revision above. Historical Rspack package names, versions, and test evidence below and in the feasibility records remain unchanged as historical evidence.
 
 ## Construction-time history forwarding
 

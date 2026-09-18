@@ -43,7 +43,7 @@ export function sharedDependencies() {
   shared['@tecton/react/'] = {
     singleton: true,
     strictVersion: true,
-    requiredVersion: '0.0.0-local.424889e4',
+    requiredVersion: '0.0.0-local.576a766a',
     packageName: '@tecton/react',
   };
   return shared;

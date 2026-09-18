@@ -1,10 +1,73 @@
 # Implementation progress
 
-## Current checkpoint — 2026-09-18
+## Gate 1 bounded evidence — tracing deferred — 2026-09-18
+
+- Replaced the custom modal path with native Tecton `Dialog`, `Button`, and
+  `PortalProvider` usage. The native boundary blocker now restores the cursor
+  before blocking and proceeds through the native resolver exactly once; a real
+  host navigation regression covers this ordering.
+- Added the real MF2 concurrent Discovery proof: two mounts use the same
+  generated route tree while retaining distinct router/context/loader state,
+  with per-mount unsaved-navigation blockers. The Chromium proof verifies
+  scoped Tecton Dialog Escape, focus, and disposal isolation.
+- Added compiled and explicit `use no memo` consumer coverage. Both consumers
+  continue to receive selective framework hook/theme updates, and the build
+  evidence checks compiler output, source maps, and retained scope locations.
+- Portal forwarding is supplied upstream in
+  [Tecton PR #24](https://github.com/rpkapps/tecton-ui-1/pull/24), which covers
+  internal forwarding for supported React Aria Components overlay wrappers;
+  consumers use the Tecton API. The earlier durable head
+  `8b1aa66c2a600b8c32ebef6d98bafb6121e940d7` is historical. The current
+  framework canonical artifact is repinned to upstream head
+  `576a766a4af5401c7f232a5f9f8460acf9e31ae6`; independent validation reports
+  the upstream 312-test, 21-file suite and workspace typecheck passing. Its
+  `generated:check` also passed in CI run
+  [35385630925](https://github.com/rpkapps/tecton-ui-1/actions/runs/35385630925)
+  (59 checks reported, 0 failures).
+- Historical CI run [35380935168](https://github.com/rpkapps/mfe-frameowrk/actions/runs/35380935168)
+  at exact commit `adf97ab9412b50501e6cfc7781a7d6f6c30a036a` passes 208
+  behavior tests, both Gate 0 tests, all three production builds, and all 13
+  Chromium browser tests in 39s. The dual-mount scoped Tecton Dialog proof
+  covers Escape, focus, and disposal. Firefox and WebKit remain untested.
+- Historical CI run `35387540423` on reviewed head `4e2daa1` recorded 210 behavior
+  tests, both Gate 0 tests, all three production builds, and 14 Chromium checks
+  in 34.4s. Its tracing fixture result is historical only after the approved
+  tracing deferral; no current tracing pass is claimed.
+- `node scripts/build-test-apps.mjs` exited 0 for all three production builds in
+  that historical record. The remaining Gate 1 evidence is preserved; tracing
+  is no longer its item 11 blocker.
+
+## Gate 1 bounded evidence — 2026-09-18
+
+- Added a real Discovery remote navigation blocker using TanStack Router's native
+  `useBlocker({ withResolver: true })`. The remote presents MFE-owned stay/leave UI for
+  shell exits and browser Back; the Playwright cases are in
+  `tests/browser/test-shell.spec.ts`.
+- Added an in-process React proof that two mounts share one generated-style route tree while
+  retaining distinct routers, histories, contexts, and disposal in
+  `tests/tracer/contract-tracer.test.tsx` (17 tests pass in that file). This is not a browser
+  proof of concurrent federated mounts.
+- The local environment had no Playwright Chromium executable for this historical checkpoint;
+  the reviewed CI run above supplies the browser evidence.
+- Tracing is deferred by the approved contract revision. The prior OTel/Zone
+  characterization and fixture remain historical evidence only; no tracing
+  implementation, browser pass, public carrier, or arbitrary-await parentage
+  promise is claimed now.
+- Post-removal local validation passes 208 behavior tests across 22 files and
+  all three production builds. The 13 Chromium checks are listed but were not
+  run, and no CI upload exists for this removal state.
+
+## Trace feasibility status — deferred — 2026-09-18
+
+Tracing is removed from the current Gate 1 exit requirement. The original item 11 no longer
+blocks the remaining Gate 1 work. A later dedicated tracing gate must review and prove the
+framework-owned contract before telemetry-provider integration; no deadline or new public API
+is approved. Existing `startSpan`/`startActiveSpan` semantics and the standard `#mfe/fetch`
+signature remain unchanged.
 
 ## Rsbuild surface migration — 2026-09-18
 
-The active build surface is now `@company/mfe-rsbuild`: native `mfePlugin` and `sharedReactPlugin` plugin collections compose through Rsbuild, while MF2 remains private. Rsbuild uses the Rspack engine underneath, so this changes package and configuration names without introducing a second bundler. All three production builds pass. Two Rsbuild inspection tests pass for object/function PostCSS preservation, scope-last ordering, and compiler inclusion of App, adapter, and Tecton sources. Gate 0 has two passing tests. A live launcher probe passed HTTP shell and both manifests/entries, CORS, initial SSE, subset startup, SIGTERM cleanup, and port release. Full `check` passed with 205 behavior tests (202 baseline plus one boundary and two inspection tests), formatting/lint, all five strict TypeScript programs, boundaries, Tecton integrity, and dependency-script controls; the 10-test browser suite passed in [CI run 35368770074](https://github.com/rpkapps/mfe-frameowrk/actions/runs/35368770074) at exact commit `ee2f2c95226797e72ed48c0b77cf783dfe90f3b6`. Gate 1 remains open. Earlier Rspack versions and test results remain historical evidence.
+The active build surface is now `@company/mfe-rsbuild`: native `mfePlugin` and `sharedReactPlugin` plugin collections compose through Rsbuild, while MF2 remains private. Rsbuild uses the Rspack engine underneath, so this changes package and configuration names without introducing a second bundler. All three production builds pass. Two Rsbuild inspection tests pass for object/function PostCSS preservation, scope-last ordering, and compiler inclusion of App, adapter, and Tecton sources. Gate 0 has two passing tests. A live launcher probe passed HTTP shell and both manifests/entries, CORS, initial SSE, subset startup, SIGTERM cleanup, and port release. Full `check` passed with 205 behavior tests (202 baseline plus one boundary and two inspection tests), formatting/lint, all five strict TypeScript programs, boundaries, Tecton integrity, and dependency-script controls; the 10-test browser suite passed in [CI run 35368770074](https://github.com/rpkapps/mfe-frameowrk/actions/runs/35368770074) at exact commit `ee2f2c95226797e72ed48c0b77cf783dfe90f3b6`. That earlier checkpoint preceded the bounded Gate 1 closeout recorded above. Earlier Rspack versions and test results remain historical evidence.
 
 **Gate 0 passed with the approved contract revisions.** App factories forward framework-owned history before native router construction; existing shell-state hooks provide live UI while route callbacks receive native load snapshots. [Contract](approved-contract-revisions.md) · [validation scope](gate-zero-validation.md).
 
@@ -45,7 +108,11 @@ Validation is complete for the requested test environment:
 
 ## Remaining gate evidence
 
-This test shell establishes the requested local integration path. Gate 1 remains open pending its full browser matrix, native blocker presentation across boundary exits, concurrent mounts of one generated tree, async trace correlation, and compiled/uncompiled adapter consumer proofs. Existing bridge unit tests are not a substitute for those browser proofs. No later-gate auth, widgets, telemetry vendor integration, command/breadcrumb framework, or legacy adapter is claimed.
+This test shell establishes the requested local integration path and the remaining bounded Gate 1
+evidence is recorded. Tracing is deferred by approved revision. Later-gate auth, full telemetry
+vendor integration, Firefox/WebKit coverage, performance, widgets, commands, breadcrumbs, and the
+legacy adapter remain outside this closeout. Existing bridge unit tests remain supplementary to
+the recorded browser proofs.
 
 Gate 9 separately requires legacy repositories or production-equivalent fixtures. Release gates retain unfamiliar-developer tasks, agreed performance budgets, browser coverage, and actual legacy compatibility.
 

@@ -1,6 +1,7 @@
 "use client"
 
 import * as React from "react"
+import { usePortalTarget } from "@tecton/react/tecton/portal"
 import { cn } from "cn"
 import {
   Dialog as DialogPrimitive,
@@ -46,6 +47,7 @@ function DialogOverlay({
   className?: string
   children: React.ReactNode
 }) {
+  const portalTarget = usePortalTarget()
   return (
     <ModalOverlayPrimitive
       data-slot="dialog-overlay"
@@ -54,6 +56,7 @@ function DialogOverlay({
         className
       )}
       {...props}
+      UNSTABLE_portalContainer={portalTarget}
     >
       {children}
     </ModalOverlayPrimitive>

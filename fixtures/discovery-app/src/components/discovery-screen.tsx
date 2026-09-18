@@ -1,7 +1,14 @@
 import { useTheme, useUser } from '@company/mfe-react';
-import { Link } from '@tanstack/react-router';
+import { Link, useBlocker, useRouterState } from '@tanstack/react-router';
 import { Badge } from '@tecton/react/components/badge';
 import { Button, buttonVariants } from '@tecton/react/components/button';
+import {
+  Dialog,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@tecton/react/components/dialog';
 import {
   Card,
   CardContent,
@@ -22,13 +29,15 @@ import {
   WaterIcon,
 } from '@tecton/react/icons';
 import { AppShellBody, AppShellMain, AppShellSidebar } from '@tecton/react/tecton/app-shell';
+import { PortalProvider } from '@tecton/react/tecton/portal';
 import {
   PageHeader,
   PageHeaderContent,
   PageHeaderNav,
   PageHeaderTitle,
 } from '@tecton/react/tecton/page-header';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
+import { CompiledAdapterConsumer, UncompiledAdapterConsumer } from './compiler-consumers';
 
 type Discipline = 'Subsurface' | 'Drilling' | 'Facilities';
 type Decision = {
@@ -98,11 +107,26 @@ function DecisionCard({ decision }: { decision: Decision }) {
 export function DiscoveryScreen({ framing = false }: { framing?: boolean }) {
   const user = useUser();
   const theme = useTheme();
+  const loadedUserId = useRouterState({
+    select: (state) => {
+      const loaderData = state.matches[state.matches.length - 1]?.loaderData;
+      return (loaderData as { loadedUserId?: string } | undefined)?.loadedUserId;
+    },
+  });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [view, setView] = useState<'list' | 'graph'>('list');
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [selected, setSelected] = useState('1.01');
   const [showAll, setShowAll] = useState(true);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
+  const shouldBlockNavigation = useCallback(() => {
+    return hasUnsavedChanges;
+  }, [hasUnsavedChanges]);
+  const blocker = useBlocker({
+    withResolver: true,
+    shouldBlockFn: shouldBlockNavigation,
+  });
 
   function toggleAlternative(code: string) {
     setCollapsed((previous) => {
@@ -125,6 +149,28 @@ export function DiscoveryScreen({ framing = false }: { framing?: boolean }) {
       className="relative h-full bg-background text-sm text-foreground"
       data-testid="discovery-app"
     >
+      {blocker.status === 'blocked' && (
+        <PortalProvider container={portalContainer}>
+          <Dialog
+            isOpen
+            showCloseButton={false}
+            onOpenChange={(open) => {
+              if (!open) blocker.reset?.();
+            }}
+          >
+            <DialogHeader>
+              <DialogTitle>Leave Discovery?</DialogTitle>
+              <DialogDescription>Your current review will remain open here.</DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button variant="outline" onPress={() => blocker.reset?.()}>
+                Stay here
+              </Button>
+              <Button onPress={() => blocker.proceed?.()}>Leave Discovery</Button>
+            </DialogFooter>
+          </Dialog>
+        </PortalProvider>
+      )}
       <AppShellSidebar
         className={
           sidebarOpen
@@ -218,6 +264,27 @@ export function DiscoveryScreen({ framing = false }: { framing?: boolean }) {
         </div>
       </AppShellSidebar>
       <AppShellMain className="p-3 sm:p-5 lg:p-6">
+        <div ref={setPortalContainer} className="contents" />
+        <div
+          className="mb-3 flex flex-wrap items-center gap-2"
+          data-testid="unsaved-change-control"
+        >
+          <Button
+            variant={hasUnsavedChanges ? 'secondary' : 'outline'}
+            aria-pressed={hasUnsavedChanges}
+            onPress={() => setHasUnsavedChanges((value) => !value)}
+          >
+            {hasUnsavedChanges ? 'Mark review saved' : 'Make review unsaved'}
+          </Button>
+          <span role="status" data-testid="unsaved-change-state">
+            {hasUnsavedChanges ? 'Unsaved review changes' : 'Review saved'}
+          </span>
+          <span data-testid="discovery-loader-context">Loaded for {loadedUserId ?? 'pending'}</span>
+        </div>
+        <div className="flex gap-2" aria-label="Compiler adapter consumers">
+          <CompiledAdapterConsumer />
+          <UncompiledAdapterConsumer />
+        </div>
         <PageHeader className="mb-6">
           <Button
             className="md:hidden"
@@ -235,6 +302,7 @@ export function DiscoveryScreen({ framing = false }: { framing?: boolean }) {
           <PageHeaderNav aria-label="Project sections">
             <Link
               to="/"
+              search
               className={buttonVariants({ variant: !framing ? 'secondary' : 'ghost' })}
               aria-current={!framing ? 'page' : undefined}
             >
@@ -242,6 +310,7 @@ export function DiscoveryScreen({ framing = false }: { framing?: boolean }) {
             </Link>
             <Link
               to="/framing"
+              search
               className={buttonVariants({ variant: framing ? 'secondary' : 'ghost' })}
               aria-current={framing ? 'page' : undefined}
             >

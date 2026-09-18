@@ -1,7 +1,6 @@
 "use client"
 
 import * as React from "react"
-import { UNSAFE_PortalProvider, useUNSAFE_PortalContext } from "react-aria"
 
 /**
  * Tecton PortalProvider — chooses the element that every Tecton overlay
@@ -13,8 +12,8 @@ import { UNSAFE_PortalProvider, useUNSAFE_PortalContext } from "react-aria"
  * frontends, embedded widgets) give each root a body-level container of its
  * own, so the overlays keep escaping `overflow: hidden` ancestors while the
  * container carries that root's scoped styles, theme tokens and ownership
- * attributes. The provider is a thin adapter over React Aria's portal
- * context; nothing in the DOM, `document.body` or React's portals is patched.
+ * attributes. Tecton owns the container context and overlay wrappers pass the
+ * resolved container directly to their React Aria Components primitive.
  */
 type PortalProviderProps = {
   /**
@@ -25,18 +24,14 @@ type PortalProviderProps = {
   children: React.ReactNode
 }
 
+type PortalContainer = HTMLElement | null | (() => HTMLElement | null)
+
+const PortalContainerContext = React.createContext<PortalContainer | undefined>(
+  undefined
+)
+
 function PortalProvider({ container, children }: PortalProviderProps) {
-  const getContainer = React.useCallback(
-    () => (typeof container === "function" ? container() : container),
-    [container]
-  )
-  return (
-    <UNSAFE_PortalProvider
-      getContainer={container === null ? null : getContainer}
-    >
-      {children}
-    </UNSAFE_PortalProvider>
-  )
+  return <PortalContainerContext value={container}>{children}</PortalContainerContext>
 }
 
 /**
@@ -44,9 +39,15 @@ function PortalProvider({ container, children }: PortalProviderProps) {
  * `PortalProvider` is in scope (React Aria then uses `document.body`).
  */
 function usePortalContainer(): HTMLElement | null {
-  const { getContainer } = useUNSAFE_PortalContext()
-  return getContainer?.() ?? null
+  const container = React.useContext(PortalContainerContext)
+  return typeof container === "function" ? container() : (container ?? null)
 }
 
-export { PortalProvider, usePortalContainer }
+/** The concrete target passed to React Aria Components overlay primitives. */
+function usePortalTarget(): HTMLElement | undefined {
+  const container = usePortalContainer()
+  return container ?? (typeof document === "undefined" ? undefined : document.body)
+}
+
+export { PortalProvider, usePortalContainer, usePortalTarget }
 export type { PortalProviderProps }

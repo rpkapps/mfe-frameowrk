@@ -184,6 +184,33 @@ describe('test-shell browser boundaries', () => {
     await expectPath('/discovery/project?view=list#decisions');
   });
 
+  it('restores the browser cursor while a native decision is pending and replays proceed once', async () => {
+    const history = navigation.createBoundaryHistory('/discovery');
+    const listener = vi.fn();
+    history.push('/discovery/team');
+    history.subscribe(listener);
+    const first = deferred<boolean>();
+    const second = deferred<boolean>();
+    const blocker = vi.fn(() => (blocker.mock.calls.length === 1 ? first.promise : second.promise));
+    history.block({ blockerFn: blocker });
+
+    window.history.back();
+    await vi.waitFor(() => expect(blocker).toHaveBeenCalledTimes(1));
+    await expectPath('/discovery/team');
+    first.resolve(true);
+    await vi.waitFor(() => expect(blocker).toHaveBeenCalledTimes(1));
+    await expectPath('/discovery/team');
+    expect(listener).not.toHaveBeenCalled();
+
+    window.history.back();
+    await vi.waitFor(() => expect(blocker).toHaveBeenCalledTimes(2));
+    await expectPath('/discovery/team');
+    second.resolve(false);
+    await expectPath('/discovery/project?view=list#decisions');
+    expect(blocker).toHaveBeenCalledTimes(2);
+    expect(listener).toHaveBeenCalledOnce();
+  });
+
   it('passes cross-app browser Back to the active remote blocker before committing', async () => {
     await navigation.navigate('/geology/map');
     const history = navigation.createBoundaryHistory('/geology');

@@ -20,7 +20,16 @@ const test = browserTest.extend<{ browserErrors: string[] }>({
 
 const shellHeader = (page: Page) => page.getByRole('banner', { name: 'Application shell' });
 
-async function switchApp(page: Page, name: 'Discovery' | 'Geology') {
+async function armUnsavedChanges(scope: Page | Locator) {
+  await scope.getByRole('button', { name: 'Make review unsaved', exact: true }).click();
+  await expect(scope.getByTestId('unsaved-change-state')).toHaveText('Unsaved review changes');
+}
+
+async function switchApp(
+  page: Page,
+  name: 'Discovery' | 'Geology',
+  options: { arm?: boolean } = {},
+) {
   await page.getByRole('button', { name: /^Switch application, current:/ }).click();
   const finder = page.getByRole('dialog', { name: 'Applications' });
   await finder.getByPlaceholder('Search applications…').fill(name);
@@ -33,6 +42,7 @@ async function switchApp(page: Page, name: 'Discovery' | 'Geology') {
       exact: true,
     }),
   ).toBeVisible();
+  if (options.arm) await armUnsavedChanges(page);
 }
 
 async function appearance(element: Locator) {
@@ -140,12 +150,159 @@ test('supports deep links, native app links and browser back and forward across 
   ).toBeVisible();
 });
 
+test('keeps the remote visible while a native blocker cancels or proceeds across shell exits', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const currentWindow = window as unknown as Record<string, unknown>;
+    // Keep the exact native references for the no-global-patching assertion below.
+    /* eslint-disable @typescript-eslint/unbound-method -- preserve exact native methods for identity checks */
+    currentWindow.__mfeNativeRefs = {
+      pushState: history.pushState,
+      replaceState: history.replaceState,
+      fetch: window.fetch,
+      addEventListener: window.addEventListener,
+      removeEventListener: window.removeEventListener,
+    };
+    /* eslint-enable @typescript-eslint/unbound-method -- end native identity snapshot */
+  });
+  await page.goto('/discovery/');
+  await armUnsavedChanges(page);
+  await page.getByRole('button', { name: /^Switch application, current:/ }).click();
+  const finder = page.getByRole('dialog', { name: 'Applications' });
+  await finder.getByPlaceholder('Search applications…').fill('Geology');
+  await finder.getByRole('menuitem', { name: /Geology/ }).click();
+  const blocker = page.getByRole('dialog', { name: 'Leave Discovery?' });
+  await expect(blocker).toBeVisible();
+  await expect(page).toHaveURL(/\/discovery\/$/);
+  await blocker.getByRole('button', { name: 'Stay here' }).click();
+  await expect(blocker).toBeHidden();
+  await expect(page.getByRole('heading', { name: 'Orion Discovery', exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: /^Switch application, current:/ }).click();
+  await page
+    .getByRole('dialog', { name: 'Applications' })
+    .getByPlaceholder('Search applications…')
+    .fill('Geology');
+  await page
+    .getByRole('dialog', { name: 'Applications' })
+    .getByRole('menuitem', { name: /Geology/ })
+    .click();
+  const historyLength = await page.evaluate(() => window.history.length);
+  await blocker.getByRole('button', { name: 'Leave Discovery' }).click();
+  await expect(page).toHaveURL(/\/geology\/$/);
+  expect(await page.evaluate(() => window.history.length)).toBe(historyLength + 1);
+  expect(
+    await page.evaluate(() => {
+      const refs = (window as unknown as { __mfeNativeRefs: Record<string, unknown> })
+        .__mfeNativeRefs;
+      return [
+        history.pushState === refs.pushState,
+        history.replaceState === refs.replaceState,
+        window.fetch === refs.fetch,
+        window.addEventListener === refs.addEventListener,
+        window.removeEventListener === refs.removeEventListener,
+      ];
+    }),
+  ).toEqual([true, true, true, true, true]);
+  await expect(
+    page.getByRole('heading', { name: 'Geologic Background', exact: true }),
+  ).toBeVisible();
+});
+
+test('keeps the remote visible when browser Back is canceled, then proceeds once', async ({
+  page,
+}) => {
+  await page.goto('/discovery/');
+  await switchApp(page, 'Geology');
+  await switchApp(page, 'Discovery', { arm: true });
+  await page.goBack();
+  const blocker = page.getByRole('dialog', { name: 'Leave Discovery?' });
+  await expect(blocker).toBeVisible();
+  await expect(page).toHaveURL(/\/discovery\/$/);
+  await blocker.getByRole('button', { name: 'Stay here' }).click();
+  await expect(blocker).toBeHidden();
+  await expect(page).toHaveURL(/\/discovery\/$/);
+  await page.goBack();
+  await expect(blocker).toBeVisible();
+  await blocker.getByRole('button', { name: 'Leave Discovery' }).click();
+  await expect(page).toHaveURL(/\/geology\/$/);
+  await expect(
+    page.getByRole('heading', { name: 'Geologic Background', exact: true }),
+  ).toBeVisible();
+});
+
+test('isolates two real MF2 mounts of one generated App and disposes one independently', async ({
+  page,
+}) => {
+  await page.goto('/discovery/project/?dual=1');
+  const first = page.getByTestId('dual-first');
+  const second = page.getByTestId('dual-second');
+  await expect(first.getByTestId('discovery-session')).toHaveText(/First mount/);
+  await expect(second.getByTestId('discovery-session')).toHaveText(/Second mount/);
+  await expect(first.getByRole('heading', { name: 'Orion Discovery', exact: true })).toBeVisible();
+  await expect(second.getByRole('heading', { name: 'Orion Discovery', exact: true })).toBeVisible();
+  await expect(first.getByTestId('discovery-session')).toHaveText(/First mount/);
+  await expect(second.getByTestId('discovery-session')).toHaveText(/Second mount/);
+  await expect(first.getByTestId('discovery-loader-context')).toHaveText('Loaded for first-mount');
+  await expect(second.getByTestId('discovery-loader-context')).toHaveText(
+    'Loaded for second-mount',
+  );
+
+  await second.getByRole('link', { name: 'Framing', exact: true }).click();
+  await expect(page).toHaveURL(/\/discovery\/project\/framing\?dual=1$/);
+  await expect(
+    second.getByRole('heading', { name: 'A shared frame for the next decision', exact: true }),
+  ).toBeVisible();
+  await expect(first.getByTestId('discovery-loader-context')).toHaveText('Loaded for first-mount');
+  await expect(second.getByTestId('discovery-loader-context')).toHaveText(
+    'Loaded for second-mount',
+  );
+  await armUnsavedChanges(second);
+
+  await second.getByRole('button', { name: 'Exit nested boundary' }).click();
+  const blocker = second.getByRole('dialog', { name: 'Leave Discovery?' });
+  await expect(page).toHaveURL(/\/discovery\/project\/framing\?dual=1$/);
+  await expect(blocker).toBeVisible();
+  await expect(second.locator('[role="dialog"]')).toHaveCount(1);
+  await expect(first.getByRole('dialog')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  await expect(blocker).toBeHidden();
+  await expect(second.getByRole('button', { name: 'Exit nested boundary' })).toBeFocused();
+  await second.getByRole('button', { name: 'Exit nested boundary' }).click();
+  await expect(blocker).toBeVisible();
+  await blocker.getByRole('button', { name: 'Stay here' }).click();
+  await expect(blocker).toBeHidden();
+  await expect(second.getByTestId('discovery-session')).toHaveText(/Second mount/);
+
+  await first.getByRole('button', { name: 'Dispose first mount' }).click();
+  await expect(first.getByRole('heading', { name: 'Orion Discovery', exact: true })).toHaveCount(0);
+  await expect(
+    second.getByRole('heading', { name: 'A shared frame for the next decision', exact: true }),
+  ).toBeVisible();
+  await expect(second.getByTestId('discovery-session')).toHaveText(/Second mount/);
+  await expect(second.getByTestId('discovery-loader-context')).toHaveText(
+    'Loaded for second-mount',
+  );
+  await second.getByRole('button', { name: 'Mark review saved', exact: true }).click();
+  await second.getByRole('link', { name: 'Overview', exact: true }).click();
+  await expect(page).toHaveURL(/\/discovery\/project\/\?dual=1$/);
+  await expect(second.getByRole('heading', { name: 'Orion Discovery', exact: true })).toBeVisible();
+  await expect(second.getByTestId('discovery-loader-context')).toHaveText(
+    'Loaded for second-mount',
+  );
+});
+
 test('propagates theme changes into the app and keeps the preference after reload', async ({
   page,
 }) => {
   await page.goto('/discovery/');
   const app = page.getByTestId('discovery-app');
+  const compiledConsumer = page.getByTestId('compiled-adapter-consumer');
+  const uncompiledConsumer = page.getByTestId('uncompiled-adapter-consumer');
   await expect(app).toBeVisible();
+  await expect(compiledConsumer).toHaveText(/Compiled: darktest-engineer/);
+  await expect(uncompiledConsumer).toHaveText(/Excluded: darktest-engineer/);
   await expect(page.getByTestId('discovery-session')).toHaveText('Sarah Elliott · Dark theme');
   const darkApp = await appearance(app);
   const darkHeader = await appearance(shellHeader(page));
@@ -156,6 +313,8 @@ test('propagates theme changes into the app and keeps the preference after reloa
   ).toBeVisible();
   await expect.poll(async () => (await appearance(app)).background).not.toBe(darkApp.background);
   await expect(page.getByTestId('discovery-session')).toHaveText('Sarah Elliott · Light theme');
+  await expect(compiledConsumer).toHaveText(/Compiled: lighttest-engineer/);
+  await expect(uncompiledConsumer).toHaveText(/Excluded: lighttest-engineer/);
   const lightApp = await appearance(app);
   const lightHeader = await appearance(shellHeader(page));
   expect(lightHeader.background).not.toBe(darkHeader.background);
@@ -167,6 +326,8 @@ test('propagates theme changes into the app and keeps the preference after reloa
   ).toBeVisible();
   expect(await appearance(app)).toEqual(lightApp);
   await expect(page.getByTestId('discovery-session')).toHaveText('Sarah Elliott · Light theme');
+  await expect(compiledConsumer).toHaveText(/Compiled: lighttest-engineer/);
+  await expect(uncompiledConsumer).toHaveText(/Excluded: lighttest-engineer/);
   expect(await appearance(shellHeader(page))).toEqual(lightHeader);
 
   await switchApp(page, 'Geology');
