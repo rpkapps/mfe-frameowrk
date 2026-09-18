@@ -8,24 +8,25 @@
   host navigation regression covers this ordering.
 - Added the real MF2 concurrent Discovery proof: two mounts use the same
   generated route tree while retaining distinct router/context/loader state,
-  with per-mount unsaved-navigation blockers. The browser run currently fails
-  on the portal-context issue before it can establish the disposal-isolation
-  assertion.
+  with per-mount unsaved-navigation blockers. The Chromium proof verifies
+  scoped Tecton Dialog Escape, focus, and disposal isolation.
 - Added compiled and explicit `use no memo` consumer coverage. Both consumers
   continue to receive selective framework hook/theme updates, and the build
   evidence checks compiler output, source maps, and retained scope locations.
-- The emitted portal-context issue is owned upstream in
+- Portal forwarding is supplied upstream in
   [Tecton PR #24](https://github.com/rpkapps/tecton-ui-1/pull/24), which covers
   internal forwarding for supported React Aria Components overlay wrappers;
   consumers use the Tecton API. Durable upstream head
-  `8b1aa66c2a600b8c32ebef6d98bafb6121e940d7` is now pinned. The corrected
-  17-file upstream diff matches exactly and was tested in `97c39`; the initial
-  export had omitted the runtime commit. The prior `1053f681...` scoped-sharing
-  browser failure is therefore a resolved candidate awaiting browser
-  confirmation.
-- Framework full `check` passes locally with 208 behavior tests; the final CI
-  browser result is pending. No browser pass is claimed. Chromium is the
-  initial matrix engine; Firefox and WebKit remain untested.
+  `8b1aa66c2a600b8c32ebef6d98bafb6121e940d7` is now pinned. The upstream
+  full suite passes 312 tests across 21 files, with typecheck and diff check
+  passing. The canonical registry patch and full build pass.
+  The environment's network proxy rejected the registry request (`NotAllowed`),
+  so full `generated:check` remains unverified.
+- CI run [35380935168](https://github.com/rpkapps/mfe-frameowrk/actions/runs/35380935168)
+  at exact commit `adf97ab9412b50501e6cfc7781a7d6f6c30a036a` passes 208
+  behavior tests, both Gate 0 tests, all three production builds, and all 13
+  Chromium browser tests in 39s. The dual-mount scoped Tecton Dialog proof
+  covers Escape, focus, and disposal. Firefox and WebKit remain untested.
 - Gate 1 remains open. The reviewed OTel/Zone candidate does not preserve active
   parentage through native `await` in the current ES2022 output. The trace
   document records a decision proposal only: framework-managed operation
