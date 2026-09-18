@@ -1,0 +1,9 @@
+node_modules/
+**/dist/
+**/coverage/
+**/.mfe/
+**/routeTree.gen.ts
+**/playwright-report/
+**/test-results/
+pnpm-lock.yaml
+docs/mfe-framework-spec.md

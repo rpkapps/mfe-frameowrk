@@ -1,0 +1,18 @@
+{
+  "name": "@company/mfe-react",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "dependencies": {
+    "@company/mfe-core": "workspace:*"
+  },
+  "peerDependencies": {
+    "@tanstack/react-query": "5.103.1",
+    "@tanstack/react-router": "1.170.38",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  }
+}

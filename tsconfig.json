@@ -1,0 +1,33 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "lib": ["ES2022", "DOM", "DOM.Iterable"],
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "noImplicitOverride": true,
+    "useUnknownInCatchVariables": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "types": ["node", "vitest/globals"],
+    "paths": {
+      "@company/mfe-core": ["./packages/mfe-core/src/index.ts"],
+      "@company/mfe-host": ["./packages/mfe-host/src/index.ts"],
+      "@company/mfe-host/internal": ["./packages/mfe-host/src/internal.ts"],
+      "@company/mfe-react": ["./packages/mfe-react/src/index.ts"]
+    }
+  },
+  "include": [
+    "packages/**/*.ts",
+    "packages/**/*.tsx",
+    "tests/**/*.ts",
+    "tests/**/*.tsx",
+    "vitest*.ts"
+  ],
+  "exclude": ["node_modules", "dist", "fixtures"]
+}

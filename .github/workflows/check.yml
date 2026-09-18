@@ -1,0 +1,24 @@
+name: Check
+
+on:
+  pull_request:
+  push:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .node-version
+      - uses: pnpm/action-setup@v4
+      - name: Install reviewed dependencies
+        run: pnpm install --frozen-lockfile
+      - name: Static checks and behavior tests
+        run: pnpm run check
+      - name: Gate 0 contract conformance
+        run: pnpm run gate:0

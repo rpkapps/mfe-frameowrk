@@ -1,0 +1,11 @@
+{
+  "name": "@company/fixture-introductory-app",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@company/mfe-react": "workspace:*",
+    "@tanstack/react-router": "1.170.38",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  }
+}

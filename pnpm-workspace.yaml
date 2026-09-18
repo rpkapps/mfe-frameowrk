@@ -1,0 +1,9 @@
+packages:
+  - packages/*
+  - fixtures/*
+
+strictDepBuilds: true
+dangerouslyAllowAllBuilds: false
+allowBuilds: {}
+minimumReleaseAgeExclude:
+  - prettier@3.9.8

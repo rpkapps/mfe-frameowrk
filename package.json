@@ -1,0 +1,47 @@
+{
+  "name": "mfe-framework-workspace",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "packageManager": "pnpm@12.4.2",
+  "engines": {
+    "node": "24.19.0",
+    "pnpm": "12.4.2"
+  },
+  "scripts": {
+    "generate": "node scripts/generate.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "lint": "eslint .",
+    "typecheck": "node scripts/generate.mjs && tsc --noEmit && tsc --noEmit -p fixtures/introductory-app/tsconfig.json",
+    "check:boundaries": "node scripts/check-boundaries.mjs",
+    "check:build-policy": "node scripts/check-build-policy.mjs",
+    "test": "node scripts/generate.mjs && vitest run",
+    "test:watch": "node scripts/generate.mjs && vitest",
+    "gate:0": "vitest run --config vitest.gate.config.ts",
+    "check": "node scripts/check.mjs"
+  },
+  "devDependencies": {
+    "@company/eslint-plugin-mfe": "workspace:*",
+    "@company/mfe-core": "workspace:*",
+    "@company/mfe-host": "workspace:*",
+    "@company/mfe-react": "workspace:*",
+    "@tanstack/history": "1.162.4",
+    "@tanstack/react-query": "5.103.1",
+    "@tanstack/react-router": "1.170.38",
+    "@tanstack/router-generator": "1.167.38",
+    "@testing-library/dom": "10.4.1",
+    "@testing-library/react": "16.3.3",
+    "@types/node": "24.10.1",
+    "@types/react": "19.2.14",
+    "@types/react-dom": "19.2.3",
+    "eslint": "10.10.0",
+    "globals": "17.12.0",
+    "jsdom": "30.1.0",
+    "prettier": "3.9.8",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "typescript": "5.9.3",
+    "vitest": "5.0.1"
+  }
+}
