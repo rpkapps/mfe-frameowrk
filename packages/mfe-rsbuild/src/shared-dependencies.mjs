@@ -17,6 +17,24 @@ export function sharedDependencies() {
       { singleton: true, strictVersion: true, requiredVersion: version },
     ]),
   );
+  // React Aria Components imports Overlay and useModalOverlay through
+  // react-aria/* subpaths. Share those external entry points, while the
+  // explicit private PortalProvider entry below keeps the barrel and its
+  // relative Overlay imports on the same context across containers.
+  shared['react-aria/'] = {
+    singleton: true,
+    strictVersion: true,
+    requiredVersion: versions['react-aria'],
+    packageName: 'react-aria',
+  };
+  for (const subpath of ['Overlay', 'useModalOverlay', 'private/overlays/PortalProvider']) {
+    shared[`react-aria/${subpath}`] = {
+      singleton: true,
+      strictVersion: true,
+      requiredVersion: versions['react-aria'],
+      packageName: 'react-aria',
+    };
+  }
   for (const subpath of ['jsx-runtime', 'jsx-dev-runtime', 'compiler-runtime']) {
     shared[`react/${subpath}`] = {
       singleton: true,
