@@ -2,7 +2,9 @@
 
 Approved on 2026-09-18 after the Gate 0 native Router and Query probes: the user explicitly approved forwarding framework-provided history into the App router factory and using `useUser`, `useGroups`, and `useTheme` for live UI shell state, with native context snapshots for route callbacks. These are contract changes, not claims that an implementation gate has passed. All other requirements and gate ordering remain in force.
 
-This document records the approved revisions applied to the supplied specification. It is the tracked companion to that source; the complete supplied specification remains excluded from the repository.
+This document records the approved revisions applied to the tracked supplied specification. The
+approved revisions remain authoritative amendments; the source specification is preserved
+verbatim in [`mfe-framework-spec.md`](./mfe-framework-spec.md).
 
 ## Tracing deferral — approved 2026-09-18
 

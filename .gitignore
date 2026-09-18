@@ -7,6 +7,5 @@ playwright-report/
 routeTree.gen.ts
 .env.local
 .gate-results/
-docs/mfe-framework-spec.md
-
+docs/handoff.md
 **/.mfe/
