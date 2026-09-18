@@ -223,6 +223,14 @@ test.describe('small screens', () => {
         }),
       ).toBeVisible();
       await assertBelowHeader(page, appName);
+      const title = page.getByRole('heading', {
+        name: appName === 'Discovery' ? 'Orion Discovery' : 'Geologic Background',
+        exact: true,
+      });
+      expect(
+        await title.evaluate((node) => node.scrollWidth <= node.clientWidth),
+        'The app title must fit without truncation on a small screen',
+      ).toBe(true);
       await expect(
         page.getByRole('button', { name: /^Switch application, current:/ }),
       ).toBeVisible();
@@ -304,6 +312,26 @@ test('loads the manifest URL supplied by a local development override', async ({
   await expect(page.getByRole('heading', { name: 'Orion Discovery', exact: true })).toBeVisible();
   await expect(page.getByTestId('discovery-session')).toHaveText('Sarah Elliott · Dark theme');
   await expect(page.getByRole('alert')).toHaveCount(0);
+});
+
+test('keeps the mounted app within the workspace when an override warning is shown', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    localStorage.setItem(
+      'mfe.test-shell.overrides',
+      JSON.stringify({ discovery: 'ftp://invalid/manifest.json' }),
+    );
+  });
+  await page.goto('/discovery/');
+  const app = page.getByTestId('discovery-app');
+  await expect(app).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: 'Ignored' })).toBeVisible();
+  const workspace = await page.getByRole('main', { name: 'Discovery workspace' }).boundingBox();
+  const content = await app.boundingBox();
+  if (!workspace || !content) throw new Error('The app and workspace must have layout.');
+  expect(content.y).toBeGreaterThan(workspace.y);
+  expect(content.y + content.height).toBeLessThanOrEqual(workspace.y + workspace.height + 1);
 });
 
 // Keep this last: Playwright runs one worker, so its temporary source edit cannot

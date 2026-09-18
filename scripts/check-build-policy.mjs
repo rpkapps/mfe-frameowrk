@@ -6,14 +6,14 @@ import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = fileURLToPath(new URL('../', import.meta.url));
-const manifest = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
-const expectedVersion = manifest.packageManager.replace(/^pnpm@/, '');
-const executable = process.env.PNPM_EXECUTABLE ?? process.env.npm_execpath;
+const executable =
+  process.env.PNPM_EXECUTABLE ??
+  (process.env.npm_config_user_agent?.startsWith('pnpm/') ? process.env.npm_execpath : undefined);
 const runner = executable
   ? /\.[cm]?js$/.test(executable)
     ? { command: process.execPath, args: [executable] }
     : { command: executable, args: [] }
-  : { command: 'corepack', args: [`pnpm@${expectedVersion}`] };
+  : { command: 'pnpm', args: [] };
 
 function runPnpm(args, cwd) {
   const result = spawnSync(runner.command, [...runner.args, ...args], {
@@ -33,11 +33,6 @@ function requireSuccess(result, operation) {
 
 const version = runPnpm(['--version'], root);
 requireSuccess(version, 'Read pnpm version');
-assert.equal(
-  version.stdout.trim(),
-  expectedVersion,
-  `Use pnpm ${expectedVersion}; set PNPM_EXECUTABLE to its executable when using a separately installed runner.`,
-);
 
 const temporaryRoot = await mkdtemp(join(root, 'node_modules/.mfe-build-policy-'));
 const artifactDirectory = join(temporaryRoot, 'artifacts');
@@ -62,7 +57,6 @@ async function checkFixture({ name, approval }) {
   await writeJson(join(packageDirectory, 'package.json'), {
     name: packageName,
     version: packageVersion,
-    packageManager: manifest.packageManager,
     files: ['install.cjs'],
     scripts: { postinstall: 'node install.cjs' },
   });
@@ -83,7 +77,6 @@ async function checkFixture({ name, approval }) {
   await writeJson(join(consumerDirectory, 'package.json'), {
     name: `mfe-build-policy-${name}-consumer`,
     private: true,
-    packageManager: manifest.packageManager,
     dependencies: { [packageName]: dependencyPath },
   });
   // Tarballs require their complete resolved artifact identity, not a registry
@@ -131,7 +124,7 @@ try {
   await checkFixture({ name: 'unreviewed' });
   await checkFixture({ name: 'approved', approval: true });
   await checkFixture({ name: 'denied', approval: false });
-  console.log(`Dependency build policy verified with pnpm ${expectedVersion}.`);
+  console.log(`Dependency build policy verified with pnpm ${version.stdout.trim()}.`);
 } finally {
   // Delete only the unique directory this invocation created.
   await rm(temporaryRoot, { recursive: true, force: true });

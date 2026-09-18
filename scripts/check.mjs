@@ -17,8 +17,8 @@ function binary(packageName, name) {
   return join(dirname(manifestPath), relativePath);
 }
 
-// Run the installed tools directly. Recursing through a bare `pnpm` could select
-// a different global version than the exact Corepack invocation that started us.
+// Run installed project tools directly; nested checks reuse the invoking pnpm
+// executable when they need to exercise package-manager behavior.
 const checks = [
   ['generation', ['scripts/generate.mjs']],
   ['Tecton distribution integrity', ['scripts/prepare-tecton.mjs', '--check']],

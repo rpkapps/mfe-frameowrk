@@ -2,6 +2,7 @@ packages:
   - packages/*
   - fixtures/*
 
+initPackageManager: false
 strictDepBuilds: true
 dangerouslyAllowAllBuilds: false
 allowBuilds: {}

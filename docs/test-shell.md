@@ -1,9 +1,9 @@
 # Local test shell
 
-Use the pinned Node and pnpm versions, then run:
+Use Node 24.19.0 and the latest stable pnpm, then run:
 
 ```sh
-corepack pnpm@12.4.2 install --frozen-lockfile
+pnpm install --frozen-lockfile
 pnpm dev
 ```
 

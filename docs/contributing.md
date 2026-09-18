@@ -1,6 +1,6 @@
 # Contributing
 
-Use the exact Node version in `.node-version` and pnpm version in `package.json`. Install with `pnpm install --frozen-lockfile`. Dependency installation scripts run only under the reviewed `allowBuilds` policy; inspect the package, resolved version, script, and reason before changing that policy. Never approve a batch of unknown scripts to make an install pass.
+Use the exact Node version in `.node-version` and the latest stable pnpm. Install pnpm with `npx get-pnpm` or update it with `pnpm self-update`, then install dependencies with `pnpm install --frozen-lockfile`. CI installs `latest`; keep pnpm unpinned in the repository. Dependency installation scripts run only under the reviewed `allowBuilds` policy; inspect the package, resolved version, script, and reason before changing that policy. Never approve a batch of unknown scripts to make an install pass.
 
 Run `pnpm run generate` to recover generated files, `pnpm run format` to format authored files, and `pnpm run check` before review. The check generates prerequisites, checks formatting, lints, typechecks, checks package boundaries, and runs behavior tests. `pnpm run gate:0` separately evaluates the contract's feasibility requirements; passing unit tests does not mean the implementation gate passed. CI performs read-only checks after generation and never formats authored code automatically.
 

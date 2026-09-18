@@ -126,14 +126,14 @@ function ShellLayout({ appId, onAppChange, children, theme, onThemeChange }: Tes
 
   return (
     <>
-      <a className="test-shell__skip-link" href="#application-workspace">
+      <a
+        className="fixed top-2 left-2 z-50 -translate-y-20 rounded-md border bg-card px-4 py-2 text-foreground focus-visible:translate-y-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        href="#application-workspace"
+      >
         Skip to application
       </a>
-      <AppShell className="test-shell">
-        <AppShellHeader
-          className="z-20 h-16 gap-1 px-2 sm:gap-2 sm:px-4"
-          aria-label="Application shell"
-        >
+      <AppShell>
+        <AppShellHeader className="z-20 max-sm:gap-1 max-sm:px-2" aria-label="Application shell">
           <AppFinder>
             <AppFinderTrigger name={name} tone="blue">
               {code}
@@ -222,7 +222,7 @@ function ShellLayout({ appId, onAppChange, children, theme, onThemeChange }: Tes
             id="application-workspace"
             aria-label={`${name} workspace`}
             tabIndex={-1}
-            className="test-shell__workspace"
+            className="flex min-h-0 flex-col overflow-hidden outline-none"
           >
             {children}
           </AppShellMain>
@@ -255,7 +255,7 @@ export function AppFailure({
   readonly onRetry: () => void;
 }) {
   return (
-    <div className="test-shell__error" role="alert">
+    <div className="absolute inset-0 z-10 grid place-items-center bg-background p-6" role="alert">
       <div className="max-w-md space-y-4 rounded-lg border bg-card p-6 shadow-lg">
         <h1 className="text-lg font-semibold">Unable to open {name}</h1>
         <p className="text-sm text-muted-foreground">{error}</p>

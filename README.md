@@ -5,7 +5,7 @@ A local Tecton shell and two independently served MF2 Apps live in this reposito
 ## Run the test environment
 
 ```sh
-corepack pnpm@12.4.2 install --frozen-lockfile
+pnpm install --frozen-lockfile
 pnpm dev
 ```
 
@@ -24,12 +24,12 @@ Remote edits reload the page, preserving the URL and shell theme. Component-loca
 
 ## Verify
 
-Use Node **24.19.0** and pnpm **12.4.2** (pinned in the repository):
+Use Node **24.19.0** and the latest stable pnpm. Install pnpm with `npx get-pnpm`, or update an existing installation with `pnpm self-update`. CI installs `latest`; the repository does not pin pnpm.
 
 ```sh
-corepack pnpm@12.4.2 install --frozen-lockfile
-corepack pnpm@12.4.2 run check
-corepack pnpm@12.4.2 run gate:0
+pnpm install --frozen-lockfile
+pnpm run check
+pnpm run gate:0
 ```
 
 `check` verifies generation, formatting, lint, strict types, package boundaries, dependency-script controls, and behavior tests. `gate:0` separately verifies the approved history and live-state contract. CI runs both commands. Current results are recorded in [progress](docs/progress.md).

@@ -99,7 +99,8 @@ export function createAppRuntime(options: {
       if (!entry) throw invalidRegistry(mountOptions.id, 'unregistered app ID');
       const placement = mountOptions.target.ownerDocument.createElement('div');
       placement.dataset.mfeScope = mountOptions.id;
-      placement.className = 'mfe-placement';
+      // Structural sizing belongs to the owned mount, independent of shell CSS.
+      Object.assign(placement.style, { width: '100%', height: '100%', minHeight: '0' });
       mountOptions.target.append(placement);
       const shellState = createShellState(mountOptions.shellState);
       let driver: AppDriver | undefined;

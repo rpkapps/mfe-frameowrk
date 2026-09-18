@@ -1,6 +1,7 @@
 # Dependency build policy
 
-The workspace pins pnpm 12.4.2 and Node 24.19.0. Dependency installation uses
+The workspace uses the latest stable pnpm and pins Node 24.19.0. CI installs
+pnpm's `latest` release; no pnpm version is pinned in the repository. Dependency installation uses
 `strictDepBuilds: true`, `dangerouslyAllowAllBuilds: false`, and an initially empty
 `allowBuilds` map. CI uses `pnpm install --frozen-lockfile` and never approves
 dependencies automatically.
@@ -19,10 +20,10 @@ disabling either control. See [pnpm's build settings](https://pnpm.io/settings/b
 
 ## Executable verification
 
-With Corepack available, run:
+With pnpm installed, run:
 
 ```sh
-node scripts/check-build-policy.mjs
+pnpm check:build-policy
 ```
 
 When invoking a separately installed executable, supply its path:
@@ -31,8 +32,9 @@ When invoking a separately installed executable, supply its path:
 PNPM_EXECUTABLE=/absolute/path/to/pnpm node scripts/check-build-policy.mjs
 ```
 
-The script defaults to `corepack pnpm@12.4.2` and rejects a different runner version.
-Corepack may need to acquire that pinned toolchain before the checks run. It packs three distinct local
+The script reuses the pnpm executable that launched it, or resolves `pnpm` from
+`PATH` when run directly with Node. It verifies the installed version's behavior
+without requiring a particular version. It packs three distinct local
 dependencies at version 1.0.0, each containing the same reviewed postinstall
 behavior: write a fixed marker inside its own package directory. Each consumer
 uses a separate empty package store, a generated lockfile, offline installation,

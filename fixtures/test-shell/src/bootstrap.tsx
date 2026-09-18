@@ -6,7 +6,6 @@ import { watchRemoteUpdates } from '@company/mfe-rspack/runtime';
 import { registry, overrideWarnings, remotes } from './registry';
 import { TestShell, AppFailure } from './shell';
 import './global.css';
-import './styles.css';
 
 const navigation = createBrowserNavigation(window);
 const runtime = createAppRuntime({ registry, adapters: [createReactAdapter()], reportError() {} });
@@ -54,7 +53,7 @@ function ShellApplication() {
       onThemeChange={setTheme}
     >
       {overrideWarnings.length > 0 && (
-        <div role="status" className="shell-notice">
+        <div role="status" className="bg-muted px-4 py-2 text-sm">
           {overrideWarnings.join(' ')}
         </div>
       )}
@@ -64,7 +63,7 @@ function ShellApplication() {
         basePath={`/${appId}`}
         shellState={shellState}
         createNavigation={createNavigation}
-        className="mfe-target"
+        className="min-h-0 w-full flex-1"
         renderStatus={(state, retry) =>
           state.status === 'error' ? (
             <AppFailure
@@ -73,7 +72,7 @@ function ShellApplication() {
               onRetry={retry}
             />
           ) : state.status === 'pending' ? (
-            <div role="status" className="shell-loading">
+            <div role="status" className="p-8 text-muted-foreground">
               Loading {appId}…
             </div>
           ) : null

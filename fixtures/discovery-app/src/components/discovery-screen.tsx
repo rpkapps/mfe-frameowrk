@@ -1,7 +1,14 @@
 import { useTheme, useUser } from '@company/mfe-react';
 import { Link } from '@tanstack/react-router';
 import { Badge } from '@tecton/react/components/badge';
-import { Button } from '@tecton/react/components/button';
+import { Button, buttonVariants } from '@tecton/react/components/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@tecton/react/components/card';
 import {
   CheckCircleOpenIcon,
   ChevronDownIcon,
@@ -15,7 +22,12 @@ import {
   WaterIcon,
 } from '@tecton/react/icons';
 import { AppShellBody, AppShellMain, AppShellSidebar } from '@tecton/react/tecton/app-shell';
-import { PageHeader, PageHeaderContent, PageHeaderTitle } from '@tecton/react/tecton/page-header';
+import {
+  PageHeader,
+  PageHeaderContent,
+  PageHeaderNav,
+  PageHeaderTitle,
+} from '@tecton/react/tecton/page-header';
 import { useState } from 'react';
 
 type Discipline = 'Subsurface' | 'Drilling' | 'Facilities';
@@ -61,19 +73,25 @@ function DisciplineIcon({ discipline }: { discipline: Discipline }) {
 
 function DecisionCard({ decision }: { decision: Decision }) {
   return (
-    <article className="discovery-decision">
-      <p className="discovery-muted">{decision.title}</p>
-      <h3>{decision.value}</h3>
-      <div className="discovery-decision-meta">
-        <Badge variant={decision.review ? 'info' : 'success'}>
-          {decision.review ? 'Ready for review' : 'Approved'}
-        </Badge>
-        <span className="discovery-discipline">
-          <DisciplineIcon discipline={decision.discipline} />
-          {decision.discipline}
-        </span>
-      </div>
-    </article>
+    <Card size="sm">
+      <CardHeader>
+        <CardDescription>{decision.title}</CardDescription>
+        <CardTitle>
+          <h3>{decision.value}</h3>
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge variant={decision.review ? 'info' : 'success'}>
+            {decision.review ? 'Ready for review' : 'Approved'}
+          </Badge>
+          <span className="flex items-center gap-1 text-xs text-muted-foreground">
+            <DisciplineIcon discipline={decision.discipline} />
+            {decision.discipline}
+          </span>
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
@@ -103,73 +121,106 @@ export function DiscoveryScreen({ framing = false }: { framing?: boolean }) {
   }
 
   return (
-    <AppShellBody className="discovery-app" data-testid="discovery-app">
+    <AppShellBody
+      className="relative h-full bg-background text-sm text-foreground"
+      data-testid="discovery-app"
+    >
       <AppShellSidebar
-        className={`discovery-sidebar ${sidebarOpen ? 'discovery-sidebar-open' : ''}`}
+        className={
+          sidebarOpen
+            ? 'absolute inset-y-0 left-0 z-10 p-4 shadow-xl md:static md:shadow-none'
+            : 'hidden p-4 md:flex'
+        }
         aria-label="Project details"
       >
-        <div className="discovery-sidebar-heading">
-          <h2>Project details</h2>
-          <PanelIcon size={19} />
+        <div className="mb-6 flex items-center justify-between">
+          <h2 className="font-medium">Project details</h2>
+          <PanelIcon className="text-muted-foreground" size={19} />
         </div>
-        <dl className="discovery-project-facts">
-          <div>
-            <dt>Status</dt>
+        <dl className="grid gap-3">
+          <div className="flex items-center justify-between">
+            <dt className="text-muted-foreground">Status</dt>
             <dd>
               <Badge variant="outline">Ongoing</Badge>
             </dd>
           </div>
-          <div>
-            <dt>Asset</dt>
-            <dd>Orion Hub</dd>
+          <div className="flex items-center justify-between">
+            <dt className="text-muted-foreground">Asset</dt>
+            <dd className="font-mono text-xs">Orion Hub</dd>
           </div>
-          <div>
-            <dt>Concepts</dt>
-            <dd>3</dd>
+          <div className="flex items-center justify-between">
+            <dt className="text-muted-foreground">Concepts</dt>
+            <dd className="font-mono text-xs">3</dd>
           </div>
         </dl>
-        <ol className="discovery-gates" aria-label="Project stage: DG1">
+        <ol className="my-8 flex" aria-label="Project stage: DG1">
           {['DG0', 'DG1', 'DG2', 'DG3', 'DG4'].map((gate, index) => (
-            <li key={gate} className={index < 2 ? 'discovery-gate-complete' : ''}>
-              <span aria-hidden="true" />
+            <li
+              key={gate}
+              className="relative grid w-1/5 justify-items-center gap-2 text-xs text-muted-foreground"
+            >
+              <span
+                aria-hidden="true"
+                className={`size-3 rotate-45 border ${index < 2 ? 'border-primary bg-primary' : 'border-border'}`}
+              />
+              {index < 4 && (
+                <span
+                  aria-hidden="true"
+                  className="absolute top-1.5 left-[calc(50%+8px)] h-px w-[calc(100%-16px)] bg-border"
+                />
+              )}
               {gate}
             </li>
           ))}
         </ol>
-        <h3 className="discovery-sidebar-label">Field development alternatives</h3>
-        <button className="discovery-concept-link" onClick={() => setShowAll((value) => !value)}>
-          <span className="discovery-index">1</span>
+        <h3 className="mb-3 text-xs font-medium">Field development alternatives</h3>
+        <Button
+          variant="ghost"
+          className="w-full justify-start"
+          onPress={() => setShowAll((value) => !value)}
+        >
+          <Badge variant="secondary">1</Badge>
           <span>Tie Back Concept</span>
-          <small>4 FDAs</small>
-          {showAll ? <ChevronDownIcon size={18} /> : <ChevronRightIcon size={18} />}
-        </button>
-        <nav className="discovery-alternatives" aria-label="Field development alternatives">
+          <small className="ml-auto font-mono text-xs text-muted-foreground">4 FDAs</small>
+          {showAll ? <ChevronDownIcon /> : <ChevronRightIcon />}
+        </Button>
+        <nav
+          className="my-2 ml-3 grid gap-1 border-l border-border-subtle pl-3"
+          aria-label="Field development alternatives"
+        >
           {alternatives.map((alternative) => (
-            <button
+            <Button
               key={alternative.code}
-              aria-current={!showAll && selected === alternative.code ? 'true' : undefined}
-              onClick={() => selectAlternative(alternative.code)}
+              variant={!showAll && selected === alternative.code ? 'secondary' : 'ghost'}
+              className="w-full justify-between"
+              aria-current={!showAll && selected === alternative.code}
+              onPress={() => selectAlternative(alternative.code)}
             >
               <span>{alternative.name}</span>
-              <small>{alternative.code}</small>
-            </button>
+              <small className="font-mono text-xs text-muted-foreground">{alternative.code}</small>
+            </Button>
           ))}
         </nav>
-        <div className="discovery-empty-concept">
-          <span className="discovery-index">2</span>New Host Concept<small>0 FDAs</small>
+        <div className="flex min-h-9 items-center gap-2 px-2">
+          <Badge variant="secondary">2</Badge>New Host Concept
+          <small className="ml-auto font-mono text-xs text-muted-foreground">0 FDAs</small>
         </div>
-        <div className="discovery-empty-concept">
-          <span className="discovery-index">3</span>Shared Host Lease<small>0 FDAs</small>
+        <div className="flex min-h-9 items-center gap-2 px-2">
+          <Badge variant="secondary">3</Badge>Shared Host Lease
+          <small className="ml-auto font-mono text-xs text-muted-foreground">0 FDAs</small>
         </div>
-        <div className="discovery-sidebar-footer" data-testid="discovery-session">
-          <span className="discovery-live-dot" />
+        <div
+          className="mt-auto flex items-center gap-2 pt-8 text-xs text-muted-foreground"
+          data-testid="discovery-session"
+        >
+          <span className="size-1.5 rounded-full bg-success" />
           {user?.name ?? 'Guest'} · {theme === 'dark' ? 'Dark' : 'Light'} theme
         </div>
       </AppShellSidebar>
-      <AppShellMain className="discovery-main">
-        <PageHeader className="discovery-page-header">
+      <AppShellMain className="p-3 sm:p-5 lg:p-6">
+        <PageHeader className="mb-6">
           <Button
-            className="discovery-sidebar-toggle"
+            className="md:hidden"
             variant="ghost"
             size="icon"
             aria-label="Toggle project details"
@@ -178,27 +229,27 @@ export function DiscoveryScreen({ framing = false }: { framing?: boolean }) {
           >
             <PanelIcon />
           </Button>
-          <PageHeaderContent>
+          <PageHeaderContent className="max-sm:basis-[calc(100%-3.75rem)]">
             <PageHeaderTitle>Orion Discovery</PageHeaderTitle>
           </PageHeaderContent>
-          <nav className="discovery-tabs" aria-label="Project sections">
+          <PageHeaderNav aria-label="Project sections">
             <Link
               to="/"
-              className={!framing ? 'discovery-tab-active' : ''}
+              className={buttonVariants({ variant: !framing ? 'secondary' : 'ghost' })}
               aria-current={!framing ? 'page' : undefined}
             >
               Overview
             </Link>
             <Link
               to="/framing"
-              className={framing ? 'discovery-tab-active' : ''}
+              className={buttonVariants({ variant: framing ? 'secondary' : 'ghost' })}
               aria-current={framing ? 'page' : undefined}
             >
               Framing
             </Link>
-          </nav>
+          </PageHeaderNav>
           {!framing && (
-            <div className="discovery-view-switch" aria-label="Alternative view">
+            <div className="flex items-center gap-1" aria-label="Alternative view">
               <Button
                 variant={view === 'list' ? 'secondary' : 'ghost'}
                 aria-pressed={view === 'list'}
@@ -222,104 +273,134 @@ export function DiscoveryScreen({ framing = false }: { framing?: boolean }) {
           <Framing />
         ) : (
           <>
-            <div className="discovery-section-heading">
-              <span className="discovery-index">1</span>
-              <h2>Tie Back Concept</h2>
+            <div className="mb-4 flex items-center gap-2">
+              <Badge variant="secondary">1</Badge>
+              <h2 className="font-medium">Tie Back Concept</h2>
               <Badge variant="outline">Ongoing</Badge>
             </div>
-            <section className="discovery-summary" aria-label="Concept summary">
-              <article className="discovery-summary-card">
-                <h3>Key decisions</h3>
-                <dl>
-                  <div>
-                    <dt>Reservoir</dt>
-                    <dd>Orion West</dd>
-                  </div>
-                  <div>
-                    <dt>Host</dt>
-                    <dd>Orion FPSO</dd>
-                  </div>
-                  <div>
-                    <dt>Drainage strategy</dt>
-                    <dd>Depletion</dd>
-                  </div>
-                </dl>
-              </article>
-              <article className="discovery-summary-card">
-                <h3>Decisions</h3>
-                <ul className="discovery-status-list">
-                  <li>
-                    <CheckCircleOpenIcon className="discovery-approved" size={18} />
-                    13 Approved
-                  </li>
-                  <li>
-                    <span className="discovery-review-dot" />5 Ready for review
-                  </li>
-                  <li>
-                    <WarningIcon className="discovery-warning" size={18} />2 Need attention
-                  </li>
-                </ul>
-              </article>
-              <article className="discovery-summary-card">
-                <h3>Description</h3>
-                <p>
-                  Uses a cost-efficient subsea template at the Orion Alpha field to pipe raw
-                  production back to the Orion FPSO for processing, using existing spare capacity
-                  and minimising new infrastructure.
-                </p>
-              </article>
+            <section
+              className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+              aria-label="Concept summary"
+            >
+              <Card size="sm">
+                <CardHeader>
+                  <CardDescription>
+                    <h3>Key decisions</h3>
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <dl className="divide-y divide-border-subtle">
+                    {[
+                      ['Reservoir', 'Orion West'],
+                      ['Host', 'Orion FPSO'],
+                      ['Drainage strategy', 'Depletion'],
+                    ].map(([label, value]) => (
+                      <div
+                        key={label}
+                        className="flex items-center justify-between gap-2 py-2 first:pt-0 last:pb-0"
+                      >
+                        <dt className="text-muted-foreground">{label}</dt>
+                        <dd className="font-mono text-xs">{value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                </CardContent>
+              </Card>
+              <Card size="sm">
+                <CardHeader>
+                  <CardDescription>
+                    <h3>Decisions</h3>
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="divide-y divide-border-subtle font-mono text-xs">
+                    <li className="flex items-center gap-2 pb-2">
+                      <CheckCircleOpenIcon className="text-success" size={18} />
+                      13 Approved
+                    </li>
+                    <li className="flex items-center gap-2 py-2">
+                      <span className="mx-0.5 size-3.5 rounded-full border border-dashed border-info" />
+                      5 Ready for review
+                    </li>
+                    <li className="flex items-center gap-2 pt-2">
+                      <WarningIcon className="text-warning" size={18} />2 Need attention
+                    </li>
+                  </ul>
+                </CardContent>
+              </Card>
+              <Card size="sm" className="sm:col-span-2 xl:col-span-1">
+                <CardHeader>
+                  <CardDescription>
+                    <h3>Description</h3>
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <p className="leading-relaxed">
+                    Uses a cost-efficient subsea template at the Orion Alpha field to pipe raw
+                    production back to the Orion FPSO for processing, using existing spare capacity
+                    and minimising new infrastructure.
+                  </p>
+                </CardContent>
+              </Card>
             </section>
-            <section className="discovery-concept" aria-label="Tie Back Concept alternatives">
-              <div className="discovery-concept-heading">
-                <h2>Tie Back Concept</h2>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  aria-pressed={showAll}
-                  onPress={() => setShowAll((value) => !value)}
-                >
-                  {showAll ? '4 FDAs' : 'Show all 4 FDAs'}
-                  <ChevronDownIcon />
-                </Button>
-              </div>
-              {view === 'graph' ? (
-                <ConceptGraph selected={selected} onSelect={selectAlternative} />
-              ) : (
-                <div className="discovery-alternative-list">
-                  {alternatives.map(
-                    (alternative, index) =>
-                      (showAll || selected === alternative.code) && (
-                        <section key={alternative.code} className="discovery-alternative">
-                          <button
-                            className="discovery-alternative-heading"
-                            aria-expanded={!collapsed.has(alternative.code)}
-                            onClick={() => toggleAlternative(alternative.code)}
-                          >
-                            <span>{alternative.name}</span>
-                            <Badge variant="secondary">FDA {alternative.code}</Badge>
-                            {alternative.reference && (
-                              <Badge variant="outline">Reference case</Badge>
-                            )}
-                            <ChevronDownIcon
-                              className={
-                                collapsed.has(alternative.code) ? 'discovery-chevron-closed' : ''
-                              }
-                              size={18}
-                            />
-                          </button>
-                          {!collapsed.has(alternative.code) && (
-                            <div className="discovery-decision-grid">
-                              {decisionsFor(index).map((decision) => (
-                                <DecisionCard key={decision.title} decision={decision} />
-                              ))}
-                            </div>
-                          )}
-                        </section>
-                      ),
-                  )}
+            <Card size="sm" role="region" aria-label="Tie Back Concept alternatives">
+              <CardHeader>
+                <div className="flex items-center justify-between gap-2">
+                  <CardTitle>
+                    <h2>Tie Back Concept</h2>
+                  </CardTitle>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    aria-pressed={showAll}
+                    onPress={() => setShowAll((value) => !value)}
+                  >
+                    {showAll ? '4 FDAs' : 'Show all 4 FDAs'}
+                    <ChevronDownIcon />
+                  </Button>
                 </div>
-              )}
-            </section>
+              </CardHeader>
+              <CardContent>
+                {view === 'graph' ? (
+                  <ConceptGraph selected={selected} onSelect={selectAlternative} />
+                ) : (
+                  <div className="grid gap-6">
+                    {alternatives.map(
+                      (alternative, index) =>
+                        (showAll || selected === alternative.code) && (
+                          <section
+                            key={alternative.code}
+                            className="border-l border-border-subtle pl-3"
+                          >
+                            <Button
+                              variant="ghost"
+                              className="mb-3 h-auto w-full flex-wrap justify-start gap-2 py-1 whitespace-normal text-left"
+                              aria-expanded={!collapsed.has(alternative.code)}
+                              onPress={() => toggleAlternative(alternative.code)}
+                            >
+                              <span>{alternative.name}</span>
+                              <Badge variant="secondary">FDA {alternative.code}</Badge>
+                              {alternative.reference && (
+                                <Badge variant="outline">Reference case</Badge>
+                              )}
+                              <ChevronDownIcon
+                                className={`ml-auto ${collapsed.has(alternative.code) ? '-rotate-90' : ''}`}
+                              />
+                            </Button>
+                            {!collapsed.has(alternative.code) && (
+                              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 2xl:grid-cols-5">
+                                {decisionsFor(index).map((decision) => (
+                                  <DecisionCard key={decision.title} decision={decision} />
+                                ))}
+                              </div>
+                            )}
+                          </section>
+                        ),
+                    )}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </>
         )}
       </AppShellMain>
@@ -329,16 +410,18 @@ export function DiscoveryScreen({ framing = false }: { framing?: boolean }) {
 
 function Framing() {
   return (
-    <section className="discovery-framing" aria-label="Project framing">
-      <div className="discovery-framing-intro">
+    <section aria-label="Project framing">
+      <div className="my-8 max-w-prose">
         <Badge variant="secondary">DG1 · Opportunity framing</Badge>
-        <h2>A shared frame for the next decision</h2>
-        <p>
+        <h2 className="mt-5 mb-3 text-3xl leading-tight font-medium">
+          A shared frame for the next decision
+        </h2>
+        <p className="leading-relaxed text-muted-foreground">
           Connect the Orion West reservoirs to existing infrastructure while keeping options open
           for future development.
         </p>
       </div>
-      <div className="discovery-framing-grid">
+      <div className="grid gap-4 md:grid-cols-3">
         {[
           [
             'Opportunity',
@@ -356,14 +439,22 @@ function Framing() {
             'Review the four field development alternatives with Subsurface, Drilling and Facilities.',
           ],
         ].map(([label, title, description]) => (
-          <article className="discovery-summary-card" key={label}>
-            <h3>{label}</h3>
-            <h2>{title}</h2>
-            <p>{description}</p>
-          </article>
+          <Card size="sm" key={label}>
+            <CardHeader>
+              <CardDescription>
+                <h3>{label}</h3>
+              </CardDescription>
+              <CardTitle>
+                <h2>{title}</h2>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="leading-relaxed">{description}</p>
+            </CardContent>
+          </Card>
         ))}
       </div>
-      <Link to="/" className="discovery-return-link">
+      <Link to="/" className={buttonVariants({ variant: 'link', className: 'mt-6' })}>
         Return to concept overview <ChevronRightIcon size={17} />
       </Link>
     </section>
@@ -378,26 +469,30 @@ function ConceptGraph({
   onSelect: (code: string) => void;
 }) {
   return (
-    <div className="discovery-graph">
-      <div className="discovery-graph-root">
+    <div className="py-6 text-center">
+      <div className="grid justify-items-center gap-3">
         <NodeIcon size={24} />
         <h3>Tie Back Concept</h3>
         <Badge variant="outline">Orion West → Orion FPSO</Badge>
       </div>
-      <div className="discovery-graph-branches">
+      <div className="mt-8 mb-5 grid grid-cols-2 gap-4 lg:grid-cols-4">
         {alternatives.map((alternative) => (
-          <button
+          <Button
             key={alternative.code}
+            variant={selected === alternative.code ? 'secondary' : 'outline'}
+            className="h-auto min-h-36 flex-col gap-3 px-3 py-5 whitespace-normal"
             aria-pressed={selected === alternative.code}
-            onClick={() => onSelect(alternative.code)}
+            onPress={() => onSelect(alternative.code)}
           >
-            <small>FDA {alternative.code}</small>
+            <small className="text-xs">FDA {alternative.code}</small>
             <strong>{alternative.name}</strong>
-            <span>{alternative.reference ? 'Reference case' : 'Development alternative'}</span>
-          </button>
+            <span className="text-xs">
+              {alternative.reference ? 'Reference case' : 'Development alternative'}
+            </span>
+          </Button>
         ))}
       </div>
-      <p className="discovery-muted">
+      <p className="text-muted-foreground">
         Select an alternative, then switch to List to explore its decisions.
       </p>
     </div>

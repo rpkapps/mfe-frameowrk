@@ -174,6 +174,7 @@ export function createReactDriver(
       validator.validateMatches(router);
       attempt.commit(() => {
         const element = document.createElement('div');
+        Object.assign(element.style, { width: '100%', height: '100%', minHeight: '0' });
         content = element;
         placement.append(element);
         attempt.onDetach(() => {
