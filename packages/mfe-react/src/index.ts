@@ -40,4 +40,3 @@ export function createApp<TRouter extends AnyRouter>(
 
 export { AppHost, createReactAdapter } from './app-host';
 export type { AppHostProps } from './app-host';
-export type { Span, Tracer } from '@company/mfe-core';

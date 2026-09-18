@@ -15,7 +15,6 @@ import {
 import { AppShellBody, AppShellMain, AppShellSidebar } from '@tecton/react/tecton/app-shell';
 import { PageHeader, PageHeaderContent, PageHeaderTitle } from '@tecton/react/tecton/page-header';
 import { useId, useState } from 'react';
-import { useTraceProbe } from '../trace-probe';
 
 type PresetKind = 'map' | 'strata' | 'wells' | 'property';
 type Layer = 'fields' | 'prospects' | 'surveys';
@@ -30,7 +29,6 @@ const presets: readonly { title: string; kind: PresetKind; started: boolean }[] 
 
 export function GeologyScreen() {
   const user = useUser();
-  useTraceProbe('geology');
   const theme = useTheme();
   const [preset, setPreset] = useState(presets[0]!);
   const [sidebarOpen, setSidebarOpen] = useState(false);

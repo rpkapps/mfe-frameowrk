@@ -11,8 +11,8 @@
   and disposal isolation.
 - Compiled and explicit `use no memo` consumers respond to framework hook/theme
   updates. The artifact checks cover compiler output, source maps, and scope
-  locations. Three production builds pass; local `check` passes 208 behavior
-  tests and Gate 0 passes both tests.
+  locations. Historical local check evidence at that checkpoint covers 208
+  behavior tests and both Gate 0 tests.
 - Portal forwarding is supplied upstream in
   [Tecton PR #24](https://github.com/rpkapps/tecton-ui-1/pull/24), covering
   internal forwarding for supported React Aria Components overlay wrappers;
@@ -22,21 +22,44 @@
   `576a766a4af5401c7f232a5f9f8460acf9e31ae6`; independent validation reports
   the upstream 312-test, 21-file suite and workspace typecheck passing. Its
   `generated:check` also passed in CI run
-  [35385630925](https://github.com/rpkapps/mfe-frameowrk/actions/runs/35385630925)
+  [35385630925](https://github.com/rpkapps/tecton-ui-1/actions/runs/35385630925)
   (59 checks reported, 0 failures).
-- CI run [35380935168](https://github.com/rpkapps/mfe-frameowrk/actions/runs/35380935168)
+- Historical CI run [35380935168](https://github.com/rpkapps/mfe-frameowrk/actions/runs/35380935168)
   at exact commit `adf97ab9412b50501e6cfc7781a7d6f6c30a036a` passes 208 behavior
   tests, both Gate 0 tests, all three production builds, and all 13 Chromium
   browser tests in 39s. The dual-mount scoped Tecton Dialog proof covers Escape,
   focus, and disposal. Firefox and WebKit remain untested.
-- The latest local `check` passes 210 behavior tests across 23 files, formatting,
-  lint, all workspace types, package boundaries, Tecton integrity, and build
-  policy. This local result does not substitute for the pending emitted-browser
-  trace proof; Gate 1 remains open.
+- Historical CI run `35387540423` on reviewed head `4e2daa1` recorded 210 behavior tests,
+  both Gate 0 tests, all three production builds, and 14 Chromium checks in
+  34.4s. Its tracing fixture result is historical only after the approved
+  tracing deferral; no current tracing pass is claimed.
 - `node scripts/build-test-apps.mjs` exits 0 for all three production builds;
   emitted remote bundles contain no OTel or `StackContextManager` imports and
-  preserve the native `await` needed by the proof. The 14 browser checks are
-  listed but have not executed.
+  preserve the native `await` needed by the historical fixture. This is not a
+  current tracing acceptance claim; later tracing and telemetry integration are
+  deferred.
+
+## Gate 1 scope after tracing deferral
+
+The reviewed-head audit supports the remaining Gate 1 criteria. The original tracing item 11 is
+removed from the current exit requirement by the approved contract revision:
+
+| Criteria | Evidence                                                                                                         |
+| -------- | ---------------------------------------------------------------------------------------------------------------- |
+| 1–6      | CI build, MF2 loading, generated CSS, override, navigation, and browser boundary checks in run `35387540423`     |
+| 7        | Author setup/editor types and local shell path documented; see the observed author-journey friction record below |
+| 8        | Compiler and mixed consumer artifact checks in the same CI run                                                   |
+| 9–10     | Native blocker and concurrent mount isolation Chromium checks in the same CI run                                 |
+| 11       | Deferred; no current tracing implementation or acceptance result is claimed                                      |
+
+The remaining Gate 1 evidence is retained. A later dedicated tracing gate must review and prove
+the framework-owned contract before telemetry-provider integration; no deadline or new public API
+is approved.
+
+Observed author-journey friction (§17.3): a fresh checkout requires dependency installation
+and generated route/declaration files before editor types are available. `pnpm dev` runs
+generation before starting the shell and remotes. Remote route edits use the explicit full
+reload fallback, preserving the URL and shell theme; this path makes no Fast Refresh claim.
 
 The bounded Rsbuild proof passes for a production Discovery remote. The test creates a temporary output directory and exercises the real `mfePlugin` configuration, so it checks emitted artifacts rather than only plugin options:
 
@@ -50,7 +73,7 @@ The packaged Tecton artifact also passes its immutable source, generated CSS, an
 
 ```sh
 node scripts/prepare-tecton.mjs --check
-# Tecton 424889e4 verified: 172 upstream files; CSS and 167 declarations checked.
+# Historical Tecton 424889e4 artifact: 172 upstream files; CSS and 167 declarations checked.
 ```
 
 This check took 8s in the same environment. Tecton is consumed from the local package artifact: its runtime TSX is compiled by the shared Babel/Rspack pipeline, while its checked declarations provide the uncompiled consumer surface. The new compiled consumer and explicit `use no memo` consumer fixture exercise actual consumer behavior in the existing tests; the fixture is evidence only after the corresponding CI run, not a declaration-level claim. The remote utilities stylesheet references the shell-owned globals and the build scopes the resulting remote CSS.

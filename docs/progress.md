@@ -1,6 +1,6 @@
 # Implementation progress
 
-## Gate 1 closeout candidate — 2026-09-18
+## Gate 1 bounded evidence — tracing deferred — 2026-09-18
 
 - Replaced the custom modal path with native Tecton `Dialog`, `Button`, and
   `PortalProvider` usage. The native boundary blocker now restores the cursor
@@ -22,30 +22,20 @@
   `576a766a4af5401c7f232a5f9f8460acf9e31ae6`; independent validation reports
   the upstream 312-test, 21-file suite and workspace typecheck passing. Its
   `generated:check` also passed in CI run
-  [35385630925](https://github.com/rpkapps/mfe-frameowrk/actions/runs/35385630925)
+  [35385630925](https://github.com/rpkapps/tecton-ui-1/actions/runs/35385630925)
   (59 checks reported, 0 failures).
-- CI run [35380935168](https://github.com/rpkapps/mfe-frameowrk/actions/runs/35380935168)
+- Historical CI run [35380935168](https://github.com/rpkapps/mfe-frameowrk/actions/runs/35380935168)
   at exact commit `adf97ab9412b50501e6cfc7781a7d6f6c30a036a` passes 208
   behavior tests, both Gate 0 tests, all three production builds, and all 13
   Chromium browser tests in 39s. The dual-mount scoped Tecton Dialog proof
   covers Escape, focus, and disposal. Firefox and WebKit remain untested.
-- Latest local `check` passes 210 behavior tests across 23 files, formatting,
-  lint, all workspace types, package boundaries, Tecton integrity, and build
-  policy. The browser proof remains pending its CI upload/approval; an external
-  GitHub tree publish was blocked by automatic review, so no remote commit or
-  ref was created. Gate 1 is not complete.
-- `node scripts/build-test-apps.mjs` exits 0 for all three production builds;
-  emitted remote bundles contain no OTel or `StackContextManager` imports and
-  preserve the native `await` needed by the proof. The 14 browser checks are
-  listed but have not executed.
-- Gate 1 remains open. The reviewed OTel/Zone candidate does not preserve active
-  parentage through native `await` in the current ES2022 output. The current
-  feasibility record documents the existing contract: framework-managed operation
-  boundaries may use an internal explicit carrier, while arbitrary author functions
-  receive no automatic parentage promise. The public `startSpan`/`startActiveSpan`
-  and standard `#mfe/fetch` semantics remain unchanged. The local Node
-  characterization and fixture source do not replace the pending emitted-browser
-  proof.
+- Historical CI run `35387540423` on reviewed head `4e2daa1` recorded 210 behavior
+  tests, both Gate 0 tests, all three production builds, and 14 Chromium checks
+  in 34.4s. Its tracing fixture result is historical only after the approved
+  tracing deferral; no current tracing pass is claimed.
+- `node scripts/build-test-apps.mjs` exited 0 for all three production builds in
+  that historical record. The remaining Gate 1 evidence is preserved; tracing
+  is no longer its item 11 blocker.
 
 ## Gate 1 bounded evidence — 2026-09-18
 
@@ -57,32 +47,27 @@
   retaining distinct routers, histories, contexts, and disposal in
   `tests/tracer/contract-tracer.test.tsx` (17 tests pass in that file). This is not a browser
   proof of concurrent federated mounts.
-- The local environment has no Playwright Chromium executable, so the new browser cases could
-  not run here; no browser pass is claimed. Browser installation was not retried.
-- Async tracing remains an unproven Gate 1 feasibility requirement. The reviewed
-  `@opentelemetry/api` 1.9.1 / `@opentelemetry/context-zone-peer-dep` 2.11.0 /
-  `zone.js` 0.16.0 probe lost parentage after `await` under the repository's ES2022
-  output; no dependency was added to the repository. The active fixture exercises an
-  internal explicit carrier only at a framework-managed request boundary. This is
-  permitted by the existing contract and does not authorize a new public handle or
-  automatic parentage for arbitrary author functions. The local Node characterization
-  is recorded; the emitted-browser proof remains pending and Gate 1 stays open.
+- The local environment had no Playwright Chromium executable for this historical checkpoint;
+  the reviewed CI run above supplies the browser evidence.
+- Tracing is deferred by the approved contract revision. The prior OTel/Zone
+  characterization and fixture remain historical evidence only; no tracing
+  implementation, browser pass, public carrier, or arbitrary-await parentage
+  promise is claimed now.
+- Post-removal local validation passes 208 behavior tests across 22 files and
+  all three production builds. The 13 Chromium checks are listed but were not
+  run, and no CI upload exists for this removal state.
 
-## Trace feasibility status — 2026-09-18
+## Trace feasibility status — deferred — 2026-09-18
 
-The reviewed Zone-based candidate did not preserve active parentage through awaited
-continuations in the ES2022 runtime probe. This narrows the evidence for that candidate
-without claiming that all browser mechanisms are exhausted. Gate 1 §5.16.3 and item 11
-require the framework-managed operation boundary to be proven in emitted browser code.
-The active fixture uses an internal explicit carrier after a native `await`, while keeping
-OTel-style `startSpan`/`startActiveSpan`, manual `end()`, and the standard `#mfe/fetch`
-signature unchanged. It makes no promise of automatic parentage across arbitrary native
-`await`; no new public `run`/`withContext`/`trace` or parent-handle API is proposed. Gate 1
-remains open pending the browser run.
+Tracing is removed from the current Gate 1 exit requirement. The original item 11 no longer
+blocks the remaining Gate 1 work. A later dedicated tracing gate must review and prove the
+framework-owned contract before telemetry-provider integration; no deadline or new public API
+is approved. Existing `startSpan`/`startActiveSpan` semantics and the standard `#mfe/fetch`
+signature remain unchanged.
 
 ## Rsbuild surface migration — 2026-09-18
 
-The active build surface is now `@company/mfe-rsbuild`: native `mfePlugin` and `sharedReactPlugin` plugin collections compose through Rsbuild, while MF2 remains private. Rsbuild uses the Rspack engine underneath, so this changes package and configuration names without introducing a second bundler. All three production builds pass. Two Rsbuild inspection tests pass for object/function PostCSS preservation, scope-last ordering, and compiler inclusion of App, adapter, and Tecton sources. Gate 0 has two passing tests. A live launcher probe passed HTTP shell and both manifests/entries, CORS, initial SSE, subset startup, SIGTERM cleanup, and port release. Full `check` passed with 205 behavior tests (202 baseline plus one boundary and two inspection tests), formatting/lint, all five strict TypeScript programs, boundaries, Tecton integrity, and dependency-script controls; the 10-test browser suite passed in [CI run 35368770074](https://github.com/rpkapps/mfe-frameowrk/actions/runs/35368770074) at exact commit `ee2f2c95226797e72ed48c0b77cf783dfe90f3b6`. Gate 1 remains open. Earlier Rspack versions and test results remain historical evidence.
+The active build surface is now `@company/mfe-rsbuild`: native `mfePlugin` and `sharedReactPlugin` plugin collections compose through Rsbuild, while MF2 remains private. Rsbuild uses the Rspack engine underneath, so this changes package and configuration names without introducing a second bundler. All three production builds pass. Two Rsbuild inspection tests pass for object/function PostCSS preservation, scope-last ordering, and compiler inclusion of App, adapter, and Tecton sources. Gate 0 has two passing tests. A live launcher probe passed HTTP shell and both manifests/entries, CORS, initial SSE, subset startup, SIGTERM cleanup, and port release. Full `check` passed with 205 behavior tests (202 baseline plus one boundary and two inspection tests), formatting/lint, all five strict TypeScript programs, boundaries, Tecton integrity, and dependency-script controls; the 10-test browser suite passed in [CI run 35368770074](https://github.com/rpkapps/mfe-frameowrk/actions/runs/35368770074) at exact commit `ee2f2c95226797e72ed48c0b77cf783dfe90f3b6`. That earlier checkpoint preceded the bounded Gate 1 closeout recorded above. Earlier Rspack versions and test results remain historical evidence.
 
 **Gate 0 passed with the approved contract revisions.** App factories forward framework-owned history before native router construction; existing shell-state hooks provide live UI while route callbacks receive native load snapshots. [Contract](approved-contract-revisions.md) · [validation scope](gate-zero-validation.md).
 
@@ -123,7 +108,11 @@ Validation is complete for the requested test environment:
 
 ## Remaining gate evidence
 
-This test shell establishes the requested local integration path. Gate 1 remains open pending its full browser matrix, native blocker presentation across boundary exits, concurrent mounts of one generated tree, async trace correlation, and compiled/uncompiled adapter consumer proofs. Existing bridge unit tests are not a substitute for those browser proofs. No later-gate auth, widgets, telemetry vendor integration, command/breadcrumb framework, or legacy adapter is claimed.
+This test shell establishes the requested local integration path and the remaining bounded Gate 1
+evidence is recorded. Tracing is deferred by approved revision. Later-gate auth, full telemetry
+vendor integration, Firefox/WebKit coverage, performance, widgets, commands, breadcrumbs, and the
+legacy adapter remain outside this closeout. Existing bridge unit tests remain supplementary to
+the recorded browser proofs.
 
 Gate 9 separately requires legacy repositories or production-equivalent fixtures. Release gates retain unfamiliar-developer tasks, agreed performance budgets, browser coverage, and actual legacy compatibility.
 
