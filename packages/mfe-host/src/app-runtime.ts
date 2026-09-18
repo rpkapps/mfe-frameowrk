@@ -1,13 +1,20 @@
 import { createMfeError, isMfeError } from '@company/mfe-core';
 import type { MfeError, ShellState, ShellStateStore } from '@company/mfe-core';
 
+import { normalizeRegistry, selectAdapter } from './registry';
+
 import type { BoundaryHistory } from './boundary-history';
 import { createMountLifecycle } from './mount-lifecycle';
-import type { MountAttempt, MountLifecycle } from './mount-lifecycle';
+import { resolveMountDeadlines } from './mount-lifecycle';
+import type { MountAttempt, MountDeadlines, MountLifecycle } from './mount-lifecycle';
 import { createShellState } from './shell-state';
 
 export interface AppRegistration {
   readonly id: string;
+  readonly kind: 'app';
+  readonly contractMajor: number;
+  readonly version?: string;
+  /** Host implementation adapter identity; never copied into neutral records. */
   readonly adapter: string;
   readonly load: (options: {
     readonly signal: AbortSignal;
@@ -54,6 +61,47 @@ export interface AppRuntime {
   readonly mountApp: (options: AppMountOptions) => AppMount;
 }
 
+function report(sink: (error: MfeError) => void, error: MfeError): void {
+  try {
+    sink(error);
+  } catch {
+    // Diagnostics must not prevent valid registry entries from being usable.
+  }
+}
+
+function safeRegistration(value: unknown): AppRegistration | undefined {
+  try {
+    if (typeof value !== 'object' || value === null) return undefined;
+    const record = value as Record<string, unknown>;
+    const id = record.id;
+    const kind = record.kind;
+    const contractMajor = record.contractMajor;
+    const version = record.version;
+    const adapter = record.adapter;
+    const load = record.load;
+    if (
+      typeof id !== 'string' ||
+      kind !== 'app' ||
+      typeof contractMajor !== 'number' ||
+      (version !== undefined && typeof version !== 'string') ||
+      typeof adapter !== 'string' ||
+      typeof load !== 'function'
+    ) {
+      return undefined;
+    }
+    return {
+      id,
+      kind: 'app',
+      contractMajor,
+      ...(version === undefined ? {} : { version }),
+      adapter,
+      load: load as AppRegistration['load'],
+    };
+  } catch {
+    return undefined;
+  }
+}
+
 function invalidRegistry(id: string, observed: string, duplicate = false): MfeError {
   return createMfeError({
     id,
@@ -67,11 +115,101 @@ function invalidRegistry(id: string, observed: string, duplicate = false): MfeEr
   });
 }
 
+interface PendingLoad {
+  readonly controller: AbortController;
+  readonly owners: Set<symbol>;
+  readonly promise: Promise<unknown>;
+  done: boolean;
+}
+
+/** Shares one in-flight transport load while retaining per-mount cancellation. */
+function createSharedLoader() {
+  const pending = new Map<string, PendingLoad>();
+
+  function load(
+    entry: { readonly registration: AppRegistration },
+    signal: AbortSignal,
+    retry: boolean,
+  ): Promise<unknown> {
+    let operation = pending.get(entry.registration.id);
+    if (!operation) {
+      const controller = new AbortController();
+      const source = Promise.resolve().then(() =>
+        entry.registration.load({ signal: controller.signal, retry }),
+      );
+      const promise = source.finally(() => {
+        const current = pending.get(entry.registration.id);
+        if (current?.promise === promise) {
+          current.done = true;
+          pending.delete(entry.registration.id);
+        }
+      });
+      const created: PendingLoad = {
+        controller,
+        owners: new Set(),
+        promise,
+        done: false,
+      };
+      operation = created;
+      pending.set(entry.registration.id, operation);
+      // A caller may dispose before the transport settles. Keep the rejection observed.
+      void operation.promise.catch(() => {});
+    }
+
+    const active = operation;
+    const owner = Symbol(entry.registration.id);
+    active.owners.add(owner);
+    return new Promise((resolve, reject) => {
+      let released = false;
+      const release = () => {
+        if (released) return;
+        released = true;
+        active.owners.delete(owner);
+        if (active.owners.size === 0 && !active.done) {
+          active.controller.abort(new DOMException('No active load owners', 'AbortError'));
+          if (pending.get(entry.registration.id) === active) pending.delete(entry.registration.id);
+        }
+      };
+      const onAbort = () => {
+        release();
+        reject(
+          signal.reason instanceof Error
+            ? signal.reason
+            : new DOMException('App load aborted', 'AbortError'),
+        );
+      };
+      if (signal.aborted) {
+        onAbort();
+        return;
+      }
+      signal.addEventListener('abort', onAbort, { once: true });
+      active.promise.then(
+        (value) => {
+          signal.removeEventListener('abort', onAbort);
+          release();
+          if (!signal.aborted) resolve(value);
+        },
+        (cause: unknown) => {
+          signal.removeEventListener('abort', onAbort);
+          release();
+          if (!signal.aborted) {
+            reject(cause instanceof Error ? cause : new Error('App load failed', { cause }));
+          }
+        },
+      );
+    });
+  }
+
+  return { load };
+}
+
 /** Neutral registry selection, state, attempt fencing and placement ownership. */
 export function createAppRuntime(options: {
   readonly registry: readonly AppRegistration[];
   readonly adapters: readonly AppAdapter[];
   readonly reportError: (error: MfeError) => void;
+  /** Shell-owned total deadlines for load, mount, and disposal phases. */
+  readonly deadlines?: Partial<MountDeadlines>;
 }): AppRuntime {
   const adapters = new Map<string, AppAdapter>();
   for (const adapter of options.adapters) {
@@ -81,16 +219,33 @@ export function createAppRuntime(options: {
     if (adapters.has(adapter.id)) throw invalidRegistry(adapter.id, 'duplicate adapter ID', true);
     adapters.set(adapter.id, adapter);
   }
+  const deadlines = resolveMountDeadlines(options.deadlines);
+  const sharedLoader = createSharedLoader();
   const registry = new Map<string, { registration: AppRegistration; adapter: AppAdapter }>();
-  for (const registration of options.registry) {
-    const adapter = adapters.get(registration.adapter);
-    if (!registration.id.trim() || !adapter || typeof registration.load !== 'function') {
-      throw invalidRegistry(registration.id, 'invalid ID, loader, or unknown adapter');
+  const normalized = normalizeRegistry(options.registry);
+  for (const { error } of normalized.quarantined) report(options.reportError, error);
+  const registrations = new Map<string, AppRegistration>();
+  for (const candidate of options.registry as readonly unknown[]) {
+    const registration = safeRegistration(candidate);
+    if (registration) registrations.set(registration.id, registration);
+  }
+  for (const record of normalized.entries) {
+    // This runtime mounts Apps. Other neutral kinds remain available to a future
+    // runtime without being coerced into an App adapter.
+    if (selectAdapter(record) !== 'app') {
+      report(
+        options.reportError,
+        invalidRegistry(record.id, `unsupported runtime kind ${record.kind}`),
+      );
+      continue;
     }
-    if (registry.has(registration.id)) {
-      throw invalidRegistry(registration.id, 'duplicate app ID', true);
+    const registration = registrations.get(record.id);
+    const adapter = registration ? adapters.get(registration.adapter) : undefined;
+    if (!registration || !adapter || typeof registration.load !== 'function') {
+      report(options.reportError, invalidRegistry(record.id, 'invalid loader or unknown adapter'));
+      continue;
     }
-    registry.set(registration.id, { registration: { ...registration }, adapter });
+    registry.set(record.id, { registration: { ...registration }, adapter });
   }
 
   return {
@@ -108,8 +263,15 @@ export function createAppRuntime(options: {
       let retryLoad = false;
       let activeAttempt: MountAttempt | undefined;
       const lifecycle = createMountLifecycle({
-        definition: { kind: 'app', id: mountOptions.id },
+        definition: {
+          kind: 'app',
+          id: mountOptions.id,
+          ...(entry.registration.version === undefined
+            ? {}
+            : { version: entry.registration.version }),
+        },
         reportError: options.reportError,
+        deadlines,
         detach() {
           disposed = true;
           placement.remove();
@@ -117,57 +279,68 @@ export function createAppRuntime(options: {
           driver?.detach?.();
         },
         cleanup: () => driver?.dispose?.(),
+        async load(attempt) {
+          activeAttempt = attempt;
+          if (driver) return;
+          let definition: unknown;
+          const retry = retryLoad;
+          // Keep retry enabled until both the descriptor and adapter accept the module.
+          retryLoad = true;
+          try {
+            definition = await sharedLoader.load(entry, attempt.signal, retry);
+          } catch (cause) {
+            if (isMfeError(cause)) throw cause;
+            throw createMfeError({
+              id: mountOptions.id,
+              code: 'load/entry-failure',
+              operation: 'load app',
+              resource: 'registered app loader',
+              expected: 'a compatible app definition',
+              observed: 'the loader rejected',
+              owner: 'the registered transport',
+              repair: 'Check the remote availability, then retry.',
+              cause,
+            });
+          }
+          if (!attempt.isCurrent()) return;
+          if (
+            typeof definition !== 'object' ||
+            definition === null ||
+            !('kind' in definition) ||
+            definition.kind !== 'app' ||
+            !('id' in definition) ||
+            definition.id !== mountOptions.id
+          ) {
+            throw invalidRegistry(
+              mountOptions.id,
+              'loaded definition has an incompatible kind or ID',
+            );
+          }
+          driver = entry.adapter.create({
+            definition,
+            id: mountOptions.id,
+            basePath: mountOptions.basePath,
+            placement,
+            shellState,
+            ...(mountOptions.createNavigation
+              ? { createNavigation: mountOptions.createNavigation }
+              : {}),
+          });
+          retryLoad = false;
+        },
         async mount(attempt) {
           activeAttempt = attempt;
           if (!driver) {
-            let definition: unknown;
-            const retry = retryLoad;
-            // Keep retry enabled until both the descriptor and adapter accept the module.
-            retryLoad = true;
-            try {
-              definition = await entry.registration.load({
-                signal: attempt.signal,
-                retry,
-              });
-            } catch (cause) {
-              if (isMfeError(cause)) throw cause;
-              throw createMfeError({
-                id: mountOptions.id,
-                code: 'load/entry-failure',
-                operation: 'load app',
-                resource: 'registered app loader',
-                expected: 'a compatible app definition',
-                observed: 'the loader rejected',
-                owner: 'the registered transport',
-                repair: 'Check the remote availability, then retry.',
-                cause,
-              });
-            }
-            if (!attempt.isCurrent()) return;
-            if (
-              typeof definition !== 'object' ||
-              definition === null ||
-              !('kind' in definition) ||
-              definition.kind !== 'app' ||
-              !('id' in definition) ||
-              definition.id !== mountOptions.id
-            ) {
-              throw invalidRegistry(
-                mountOptions.id,
-                'loaded definition has an incompatible kind or ID',
-              );
-            }
-            driver = entry.adapter.create({
-              definition,
+            throw createMfeError({
               id: mountOptions.id,
-              basePath: mountOptions.basePath,
-              placement,
-              shellState,
-              ...(mountOptions.createNavigation
-                ? { createNavigation: mountOptions.createNavigation }
-                : {}),
+              code: 'mount/failure',
+              operation: 'mount app',
+              resource: 'registered app adapter',
+              expected: 'the adapter to be created during the load phase',
+              observed: 'no adapter driver was available',
+              owner: 'the neutral host runtime',
+              repair: 'Inspect the registry loader and retry the mount.',
             });
-            retryLoad = false;
           }
           await driver.mount(attempt);
         },

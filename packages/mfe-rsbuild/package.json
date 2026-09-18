@@ -21,7 +21,9 @@
     "postcss-loader": "8.2.1",
     "@module-federation/rsbuild-plugin": "2.9.0",
     "@rsbuild/plugin-babel": "2.1.0",
-    "@rsbuild/plugin-react": "2.1.0"
+    "@rsbuild/plugin-react": "2.1.0",
+    "@company/mfe-core": "workspace:*",
+    "@company/mfe-host": "workspace:*"
   },
   "peerDependencies": {
     "@rsbuild/core": "2.2.8"

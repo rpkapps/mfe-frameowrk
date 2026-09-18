@@ -15,11 +15,12 @@ The framework preset restricts general state-library imports and telemetry vendo
 | Rule                                                   | Default | Scope                       |
 | ------------------------------------------------------ | ------- | --------------------------- |
 | [no-global-patching](docs/rules/no-global-patching.md) | Error   | Framework and author source |
+| [no-raw-storage](docs/rules/no-raw-storage.md)         | Error   | Author source               |
 | [stable-definitions](docs/rules/stable-definitions.md) | Warning | Author source               |
 
 `stable-definitions` starts as a warning until representative author fixtures establish acceptable false positives. Correctness rules fail CI. Compiler `unsupported-syntax` and `incompatible-library` findings are warnings because they describe skipped optimization; assess them against performance requirements. Other React compiler correctness diagnostics retain the upstream recommended severity. Upgrades require reviewing changed recommendations and rerunning the fixtures.
 
-Gate 0 intentionally does not ship storage or Widget ownership checks. Add `no-raw-storage` alongside the storage API and `no-widget-global-effects` alongside Widget mounting. The latter must accept explicit source scopes in the author configuration; never infer Widget ownership from filenames. Recognizing a future definition factory name in a static identity rule does not provide that runtime API.
+`no-raw-storage` ships in the author preset with the storage API. The documented shell override bootstrap and framework storage adapter remain outside that preset's file scope. `no-widget-global-effects` is a later Widget gate and must accept explicit source scopes in the author configuration; never infer Widget ownership from filenames. Recognizing a future definition factory name in a static identity rule does not provide that runtime API.
 
 No rule rewrites source automatically. Moving definitions or changing global side effects requires a deliberate ownership decision. Dynamic property names and aliases reassigned after initialization are outside static coverage; behavior tests remain necessary.
 

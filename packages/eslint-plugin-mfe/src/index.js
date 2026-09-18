@@ -6,6 +6,7 @@ import reactHooks from 'eslint-plugin-react-hooks';
 import globals from 'globals';
 import tseslint from 'typescript-eslint';
 import noGlobalPatching from './rules/no-global-patching.js';
+import noRawStorage from './rules/no-raw-storage.js';
 import stableDefinitions from './rules/stable-definitions.js';
 
 const sourceFiles = ['**/*.{js,mjs,cjs,jsx,ts,mts,cts,tsx}'];
@@ -15,6 +16,7 @@ const plugin = {
   meta: { name: '@company/eslint-plugin-mfe', version: '0.1.0' },
   rules: {
     'no-global-patching': noGlobalPatching,
+    'no-raw-storage': noRawStorage,
     'stable-definitions': stableDefinitions,
   },
   configs: {},
@@ -134,6 +136,13 @@ plugin.configs.author = [
         ],
         'Use the public @company/mfe-react or @company/mfe-rsbuild exports. Telemetry uses framework-owned exports.',
       ),
+    },
+  },
+  {
+    name: 'mfe/author-storage-boundary',
+    files: sourceFiles,
+    rules: {
+      'mfe/no-raw-storage': 'error',
     },
   },
 ];

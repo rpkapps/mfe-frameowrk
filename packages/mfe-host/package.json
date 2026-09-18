@@ -9,5 +9,8 @@
   },
   "dependencies": {
     "@company/mfe-core": "workspace:*"
+  },
+  "devDependencies": {
+    "zod": "4.6.5"
   }
 }

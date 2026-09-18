@@ -1,7 +1,23 @@
 import { createMfeError, isMfeError } from '@company/mfe-core';
-import type { AppDescriptor, MfeError, MountHandle, MountState } from '@company/mfe-core';
+import type { MfeDescriptor, MfeError, MountHandle, MountState } from '@company/mfe-core';
 
 type Cleanup = () => void | Promise<void>;
+
+/** Shell-controlled total waits for lifecycle phases and teardown. */
+export interface MountDeadlines {
+  readonly loadMs: number;
+  readonly mountMs: number;
+  readonly disposeMs: number;
+}
+
+export const DEFAULT_MOUNT_DEADLINES: MountDeadlines = Object.freeze({
+  loadMs: 30_000,
+  mountMs: 30_000,
+  disposeMs: 5_000,
+});
+
+/** Maximum delay accepted by the platform timer APIs used by this lifecycle. */
+export const MAX_MOUNT_DEADLINE_MS = 2_147_483_647;
 
 /** Adapter-only ownership for resources acquired by one attempt. */
 export interface MountAttempt {
@@ -22,8 +38,12 @@ export interface MountAttempt {
 }
 
 export interface MountLifecycleOptions {
-  readonly definition: AppDescriptor;
+  readonly definition: MfeDescriptor;
+  /** Loading/config/bootstrap work, before the actual mount phase. */
+  readonly load?: (attempt: MountAttempt) => void | Promise<void>;
   readonly mount: (attempt: MountAttempt) => void | Promise<void>;
+  /** Shell-configured finite total deadlines. */
+  readonly deadlines?: Partial<MountDeadlines>;
   /** Mount-lifetime placement, retained across retries and detached on disposal. */
   readonly detach?: () => void;
   readonly cleanup?: Cleanup;
@@ -49,6 +69,7 @@ interface AttemptRecord {
   readonly completion: Completion;
   readonly detachers: Set<() => void>;
   readonly cleanups: Set<Cleanup>;
+  phaseTimer: ReturnType<typeof setTimeout> | undefined;
   closed: boolean;
 }
 
@@ -62,12 +83,31 @@ function createCompletion(): Completion {
   return { promise, resolve, reject };
 }
 
+export function resolveMountDeadlines(
+  deadlines: Partial<MountDeadlines> | undefined,
+): MountDeadlines {
+  const resolved = {
+    loadMs: deadlines?.loadMs ?? DEFAULT_MOUNT_DEADLINES.loadMs,
+    mountMs: deadlines?.mountMs ?? DEFAULT_MOUNT_DEADLINES.mountMs,
+    disposeMs: deadlines?.disposeMs ?? DEFAULT_MOUNT_DEADLINES.disposeMs,
+  };
+  for (const [name, value] of Object.entries(resolved)) {
+    if (!Number.isFinite(value) || value < 0 || value > MAX_MOUNT_DEADLINE_MS) {
+      throw new TypeError(
+        `${name} must be a finite number from 0 through ${MAX_MOUNT_DEADLINE_MS}`,
+      );
+    }
+  }
+  return Object.freeze(resolved);
+}
+
 /**
  * One owner for state, attempt fencing, subscriptions and disposal. This internal
  * seam contains no loader selection or renderer; adapters supply those effects.
  */
 export function createMountLifecycle(options: MountLifecycleOptions): MountLifecycle {
   const { definition } = options;
+  const deadlines = resolveMountDeadlines(options.deadlines);
   const mountController = new AbortController();
   const listeners = new Set<() => void>();
   const cleanupTasks = new Set<Promise<void>>();
@@ -84,6 +124,8 @@ export function createMountLifecycle(options: MountLifecycleOptions): MountLifec
       ...(definition.version === undefined ? {} : { definitionVersion: definition.version }),
     };
   }
+
+  const subject = definition.kind === 'widget' ? 'Widget' : 'App';
 
   function report(error: MfeError): void {
     try {
@@ -178,6 +220,10 @@ export function createMountLifecycle(options: MountLifecycleOptions): MountLifec
   function retire(record: AttemptRecord): void {
     if (record.closed) return;
     record.closed = true;
+    if (record.phaseTimer !== undefined) {
+      clearTimeout(record.phaseTimer);
+      record.phaseTimer = undefined;
+    }
     record.controller.abort();
     for (const detachResource of [...record.detachers].reverse()) {
       detach(detachResource, `attempt ${record.number} UI/subscription`);
@@ -225,13 +271,13 @@ export function createMountLifecycle(options: MountLifecycleOptions): MountLifec
           code: 'mount/failure',
           operation: snapshot.status === 'mounted' ? 'render mounted App' : 'mount',
           resource: `attempt ${record.number}`,
-          expected: 'the App adapter to render and remain usable',
+          expected: `the ${subject} adapter to render and remain usable`,
           observed:
             snapshot.status === 'mounted'
               ? 'an exception in an active mount'
               : 'an exception before a usable mount was established',
-          owner: 'the App adapter or App implementation',
-          repair: 'Inspect the original cause, correct the App, and explicitly retry this mount.',
+          owner: `the ${subject} adapter or ${subject} implementation`,
+          repair: `Inspect the original cause, correct the ${subject}, and explicitly retry this mount.`,
           cause,
         });
     retire(record);
@@ -273,6 +319,61 @@ export function createMountLifecycle(options: MountLifecycleOptions): MountLifec
     };
   }
 
+  function timeoutError(record: AttemptRecord, phase: 'load' | 'mount', elapsed: number): MfeError {
+    const deadline = deadlines[`${phase}Ms`];
+    return createMfeError({
+      ...errorDetails(),
+      code: phase === 'load' ? 'load/timeout' : 'mount/timeout',
+      operation: `${phase} ${subject}`,
+      resource: `attempt ${record.number} ${phase}`,
+      expected: `${phase} work to finish within ${deadline}ms`,
+      observed: `the ${phase} deadline expired after ${elapsed}ms`,
+      owner: 'the shell lifecycle coordinator',
+      repair: 'Inspect the remote and retry the mount.',
+    });
+  }
+
+  async function runPhase(
+    record: AttemptRecord,
+    phase: 'load' | 'mount',
+    action: () => void | Promise<void>,
+  ): Promise<void> {
+    const startedAt = Date.now();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const operation = Promise.resolve().then(action);
+    // The operation may ignore abort; observing it prevents an unhandled rejection
+    // after the timeout has fenced this attempt.
+    const observed = operation.then(
+      () => ({ kind: 'done' as const }),
+      (cause: unknown) => ({ kind: 'error' as const, cause }),
+    );
+    let removeAbortListener = () => {};
+    const aborted = new Promise<{ readonly kind: 'aborted' }>((resolve) => {
+      const onAbort = () => resolve({ kind: 'aborted' });
+      if (record.controller.signal.aborted) {
+        onAbort();
+      } else {
+        record.controller.signal.addEventListener('abort', onAbort, { once: true });
+        removeAbortListener = () => record.controller.signal.removeEventListener('abort', onAbort);
+      }
+    });
+    const timeout = new Promise<{ readonly kind: 'timeout' }>((resolve) => {
+      timer = setTimeout(() => resolve({ kind: 'timeout' }), deadlines[`${phase}Ms`]);
+      record.phaseTimer = timer;
+    });
+    const result = await Promise.race([observed, timeout, aborted]);
+    removeAbortListener();
+    if (timer !== undefined) clearTimeout(timer);
+    if (record.phaseTimer === timer) record.phaseTimer = undefined;
+    if (result.kind === 'aborted') return;
+    if (result.kind === 'timeout') {
+      const error = timeoutError(record, phase, Date.now() - startedAt);
+      // The outer failure path aborts and detaches before rejecting the attempt.
+      throw error;
+    }
+    if (result.kind === 'error') throw result.cause;
+  }
+
   function beginAttempt(): Promise<void> {
     const record: AttemptRecord = {
       number: ++attemptNumber,
@@ -280,6 +381,7 @@ export function createMountLifecycle(options: MountLifecycleOptions): MountLifec
       completion: createCompletion(),
       detachers: new Set(),
       cleanups: new Set(),
+      phaseTimer: undefined,
       closed: false,
     };
     current = record;
@@ -287,9 +389,23 @@ export function createMountLifecycle(options: MountLifecycleOptions): MountLifec
     // Error state and diagnostics remain observable when a UI starts an attempt
     // without awaiting it. Awaiting the original promise still rejects normally.
     void record.completion.promise.catch(() => {});
-    void drainCleanups()
-      .then(() => {
-        if (isCurrent(record)) return options.mount(createAttempt(record));
+    void Promise.resolve()
+      .then(async () => {
+        if (!isCurrent(record)) return;
+        const attempt = createAttempt(record);
+        if (options.load) {
+          await runPhase(record, 'load', async () => {
+            await drainCleanups();
+            if (!isCurrent(record)) return;
+            await options.load?.(attempt);
+          });
+        }
+        if (!isCurrent(record)) return;
+        await runPhase(record, 'mount', async () => {
+          await drainCleanups();
+          if (!isCurrent(record)) return;
+          await options.mount(attempt);
+        });
       })
       .then(() => {
         if (!isCurrent(record)) return;
@@ -319,7 +435,31 @@ export function createMountLifecycle(options: MountLifecycleOptions): MountLifec
   }
 
   async function finishDisposal(completion: Completion): Promise<void> {
-    await drainCleanups();
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    let timedOut = false;
+    const timeout = new Promise<void>((resolve) => {
+      timer = setTimeout(() => {
+        timedOut = true;
+        resolve();
+      }, deadlines.disposeMs);
+    });
+    await Promise.race([drainCleanups(), timeout]);
+    if (timer !== undefined) clearTimeout(timer);
+    if (timedOut) {
+      const error = createMfeError({
+        ...errorDetails(),
+        code: 'dispose/timeout',
+        operation: 'dispose',
+        resource: 'mount resources',
+        expected: `all asynchronous cleanup to finish within ${deadlines.disposeMs}ms`,
+        observed: `cleanup remained unfinished after ${deadlines.disposeMs}ms`,
+        owner: 'the mounting adapter',
+        repair: 'Inspect the unfinished cleanup; the mount is disposed.',
+      });
+      report(error);
+      completion.reject(error);
+      return;
+    }
     if (cleanupErrors.length > 0) {
       completion.reject(
         cleanupError(

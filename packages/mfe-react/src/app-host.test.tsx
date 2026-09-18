@@ -32,7 +32,7 @@ it('preserves the mount across inline navigation callbacks and shell-state updat
   }));
   const load = vi.fn(() => Promise.resolve({ kind: 'app', id: 'example' }));
   const runtime = createAppRuntime({
-    registry: [{ id: 'example', adapter: 'plain-dom', load }],
+    registry: [{ id: 'example', kind: 'app', contractMajor: 1, adapter: 'plain-dom', load }],
     adapters: [{ id: 'plain-dom', create }],
     reportError,
   });

@@ -34,7 +34,7 @@ function setup(
   };
   const reportError = vi.fn();
   const runtime = createAppRuntime({
-    registry: [{ id: 'plain', adapter: 'dom', load }],
+    registry: [{ id: 'plain', kind: 'app', contractMajor: 1, adapter: 'dom', load }],
     adapters: [adapter],
     reportError,
   });
@@ -49,6 +49,141 @@ function setup(
 }
 
 describe('framework-neutral app runtime', () => {
+  it('shares one pending load while a disposed waiter leaves another owner active', async () => {
+    let resolveLoad!: (definition: { kind: 'app'; id: string }) => void;
+    const load = vi.fn<AppRegistration['load']>(
+      ({ signal }) =>
+        new Promise((resolve, reject) => {
+          resolveLoad = resolve;
+          signal.addEventListener('abort', () => reject(new Error('transport aborted')), {
+            once: true,
+          });
+        }),
+    );
+    const created: AppAdapterOptions[] = [];
+    const runtime = createAppRuntime({
+      registry: [{ id: 'plain', kind: 'app', contractMajor: 1, adapter: 'dom', load }],
+      adapters: [
+        {
+          id: 'dom',
+          create(options) {
+            created.push(options);
+            return { mount: () => {} };
+          },
+        },
+      ],
+      reportError: vi.fn(),
+    });
+    const first = runtime.mountApp({
+      id: 'plain',
+      basePath: '/plain',
+      target: document.createElement('main'),
+      shellState,
+    });
+    const second = runtime.mountApp({
+      id: 'plain',
+      basePath: '/plain',
+      target: document.createElement('main'),
+      shellState,
+    });
+    void first.start().catch(() => {});
+    await vi.waitFor(() => expect(load).toHaveBeenCalledOnce());
+    const secondStart = second.start();
+    await vi.waitFor(() => expect(load).toHaveBeenCalledOnce());
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+
+    await first.handle.dispose();
+    expect(load.mock.calls[0]?.[0].signal.aborted).toBe(false);
+    resolveLoad({ kind: 'app', id: 'plain' });
+    await secondStart;
+
+    expect(created).toHaveLength(1);
+    expect(first.handle.state.status).toBe('disposed');
+    expect(second.handle.state.status).toBe('mounted');
+    await second.handle.dispose();
+  });
+
+  it('keeps a shared load alive for a staggered waiter after the first times out', async () => {
+    let resolveLoad!: (definition: { kind: 'app'; id: string }) => void;
+    const load = vi.fn<AppRegistration['load']>(
+      ({ signal }) =>
+        new Promise((resolve, reject) => {
+          resolveLoad = resolve;
+          signal.addEventListener('abort', () => reject(new Error('transport aborted')), {
+            once: true,
+          });
+        }),
+    );
+    const created: AppAdapterOptions[] = [];
+    const runtime = createAppRuntime({
+      registry: [{ id: 'plain', kind: 'app', contractMajor: 1, adapter: 'dom', load }],
+      adapters: [
+        {
+          id: 'dom',
+          create(options) {
+            created.push(options);
+            return { mount: () => {} };
+          },
+        },
+      ],
+      reportError: vi.fn(),
+      deadlines: { loadMs: 50 },
+    });
+    const first = runtime.mountApp({
+      id: 'plain',
+      basePath: '/first',
+      target: document.createElement('main'),
+      shellState,
+    });
+    const second = runtime.mountApp({
+      id: 'plain',
+      basePath: '/second',
+      target: document.createElement('main'),
+      shellState,
+    });
+    vi.useFakeTimers();
+    try {
+      const firstStart = first.start();
+      for (let tick = 0; tick < 6; tick++) await Promise.resolve();
+      expect(load).toHaveBeenCalledOnce();
+      await vi.advanceTimersByTimeAsync(25);
+      const secondStart = second.start();
+      for (let tick = 0; tick < 6; tick++) await Promise.resolve();
+      await vi.advanceTimersByTimeAsync(26);
+      await expect(firstStart).rejects.toMatchObject({ code: 'load/timeout' });
+      expect(load.mock.calls[0]?.[0].signal.aborted).toBe(false);
+      resolveLoad({ kind: 'app', id: 'plain' });
+      await secondStart;
+      expect(load).toHaveBeenCalledOnce();
+      expect(created).toHaveLength(1);
+      expect(first.handle.state.status).toBe('error');
+      expect(second.handle.state.status).toBe('mounted');
+    } finally {
+      vi.useRealTimers();
+      await second.handle.dispose();
+      await first.handle.dispose();
+    }
+  });
+
+  it('reports a loader deadline through the runtime as load/timeout', async () => {
+    const load = vi.fn<AppRegistration['load']>(() => new Promise(() => {}));
+    const runtime = createAppRuntime({
+      registry: [{ id: 'plain', kind: 'app', contractMajor: 1, adapter: 'dom', load }],
+      adapters: [{ id: 'dom', create: () => ({ mount: () => {} }) }],
+      reportError: vi.fn(),
+      deadlines: { loadMs: 20 },
+    });
+    const mount = runtime.mountApp({
+      id: 'plain',
+      basePath: '/plain',
+      target: document.createElement('main'),
+      shellState,
+    });
+    await expect(mount.start()).rejects.toMatchObject({ code: 'load/timeout' });
+    expect(mount.handle.state.status).toBe('error');
+    await mount.handle.dispose();
+  });
+
   it('selects a non-React adapter and isolates state and disposal between simultaneous mounts', async () => {
     const fixture = setup();
     const first = fixture.mount();
@@ -104,7 +239,7 @@ describe('framework-neutral app runtime', () => {
         }),
     }));
     const runtime = createAppRuntime({
-      registry: [{ id: 'plain', adapter: 'dom', load }],
+      registry: [{ id: 'plain', kind: 'app', contractMajor: 1, adapter: 'dom', load }],
       adapters: [{ id: 'dom', create }],
       reportError: vi.fn(),
     });
@@ -136,7 +271,7 @@ describe('framework-neutral app runtime', () => {
       })
       .mockReturnValue({ mount: () => {} });
     const runtime = createAppRuntime({
-      registry: [{ id: 'plain', adapter: 'dom', load }],
+      registry: [{ id: 'plain', kind: 'app', contractMajor: 1, adapter: 'dom', load }],
       adapters: [{ id: 'dom', create }],
       reportError: vi.fn(),
     });
@@ -164,7 +299,13 @@ describe('framework-neutral app runtime', () => {
     const reportError = vi.fn();
     const runtime = createAppRuntime({
       registry: [
-        { id: 'plain', adapter: 'dom', load: () => Promise.resolve({ kind: 'app', id: 'plain' }) },
+        {
+          id: 'plain',
+          kind: 'app',
+          contractMajor: 1,
+          adapter: 'dom',
+          load: () => Promise.resolve({ kind: 'app', id: 'plain' }),
+        },
       ],
       adapters: [
         {
@@ -221,16 +362,109 @@ describe('framework-neutral app runtime', () => {
     expect(mount.handle.state.status).toBe('disposed');
   });
 
+  it('quarantines a throwing registration accessor while retaining a healthy neighbor', async () => {
+    const broken = {
+      id: 'broken',
+      kind: 'app' as const,
+      contractMajor: 1,
+      get adapter(): never {
+        throw new Error('adapter getter failed');
+      },
+      load: vi.fn<AppRegistration['load']>(),
+    };
+    const healthyLoad = vi.fn<AppRegistration['load']>(() =>
+      Promise.resolve({ kind: 'app', id: 'healthy' }),
+    );
+    const reportError = vi.fn();
+    const runtime = createAppRuntime({
+      registry: [
+        broken,
+        {
+          id: 'healthy',
+          kind: 'app',
+          contractMajor: 1,
+          adapter: 'dom',
+          load: healthyLoad,
+        },
+      ] as unknown as AppRegistration[],
+      adapters: [{ id: 'dom', create: () => ({ mount: () => {} }) }],
+      reportError,
+    });
+    const mount = runtime.mountApp({
+      id: 'healthy',
+      basePath: '/healthy',
+      target: document.createElement('main'),
+      shellState,
+    });
+    await mount.start();
+    expect(healthyLoad).toHaveBeenCalledOnce();
+    expect(reportError).toHaveBeenCalledOnce();
+    await mount.handle.dispose();
+  });
+
+  it('quarantines malformed registry entries while retaining healthy neighbors', async () => {
+    const healthyLoad = vi.fn<AppRegistration['load']>(() =>
+      Promise.resolve({ kind: 'app', id: 'healthy' }),
+    );
+    const reportError = vi.fn();
+    const runtime = createAppRuntime({
+      registry: [
+        null,
+        { id: 'broken', kind: undefined, contractMajor: 1 },
+        {
+          id: 'healthy',
+          kind: 'app',
+          contractMajor: 1,
+          adapter: 'dom',
+          load: healthyLoad,
+        },
+      ] as unknown as AppRegistration[],
+      adapters: [fixtureAdapter()],
+      reportError,
+    });
+    const mount = runtime.mountApp({
+      id: 'healthy',
+      basePath: '/healthy',
+      target: document.createElement('main'),
+      shellState,
+    });
+    await mount.start();
+    expect(healthyLoad).toHaveBeenCalledOnce();
+    expect(reportError).toHaveBeenCalledTimes(2);
+    await mount.handle.dispose();
+
+    function fixtureAdapter(): AppAdapter {
+      return {
+        id: 'dom',
+        create: () => ({ mount: () => {} }),
+      };
+    }
+  });
+
   it('rejects ambiguous registrations and mismatched loaded descriptors before adapter creation', async () => {
     const fixture = setup();
-    const registration = { id: 'plain', adapter: 'dom', load: fixture.load };
+    const registration = {
+      id: 'plain',
+      kind: 'app' as const,
+      contractMajor: 1,
+      adapter: 'dom',
+      load: fixture.load,
+    };
+    const duplicateErrors = vi.fn();
+    const duplicateRuntime = createAppRuntime({
+      registry: [registration, registration],
+      adapters: [fixture.adapter],
+      reportError: duplicateErrors,
+    });
+    expect(duplicateErrors).toHaveBeenCalledTimes(2);
     expect(() =>
-      createAppRuntime({
-        registry: [registration, registration],
-        adapters: [fixture.adapter],
-        reportError: vi.fn(),
+      duplicateRuntime.mountApp({
+        id: 'plain',
+        basePath: '/plain',
+        target: document.createElement('main'),
+        shellState,
       }),
-    ).toThrow(expect.objectContaining({ code: 'registry/duplicate-id' }));
+    ).toThrow(expect.objectContaining({ code: 'registry/invalid-descriptor' }));
     const invalid = setup(
       vi.fn<AppRegistration['load']>(() => Promise.resolve({ kind: 'app', id: 'other' })),
     );

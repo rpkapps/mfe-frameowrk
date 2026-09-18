@@ -225,13 +225,21 @@ importers:
         specifier: 8.70.0
         version: 8.70.0(eslint@10.10.0(jiti@2.7.0))(typescript@5.9.3)
 
-  packages/mfe-core: {}
+  packages/mfe-core:
+    dependencies:
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
 
   packages/mfe-host:
     dependencies:
       '@company/mfe-core':
         specifier: workspace:*
         version: link:../mfe-core
+    devDependencies:
+      zod:
+        specifier: 4.6.5
+        version: 4.6.5
 
   packages/mfe-react:
     dependencies:
@@ -262,6 +270,12 @@ importers:
       '@babel/core':
         specifier: 7.29.7
         version: 7.29.7
+      '@company/mfe-core':
+        specifier: workspace:*
+        version: link:../mfe-core
+      '@company/mfe-host':
+        specifier: workspace:*
+        version: link:../mfe-host
       '@module-federation/enhanced':
         specifier: 2.9.0
         version: 2.9.0(@rspack/core@2.2.6(@module-federation/runtime-tools@2.9.0)(@swc/helpers@0.5.23))(typescript@5.9.3)
