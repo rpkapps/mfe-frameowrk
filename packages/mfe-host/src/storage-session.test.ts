@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
-import { createStorageCoordinator } from './storage';
+import { createInternalStorageCoordinator } from '@company/mfe-host/internal';
 import {
   hasStorageSessionChanged,
   transitionStorageSession,
@@ -61,8 +61,12 @@ describe('storage session transitions', () => {
   it('retires session values before the publish callback on a semantic transition', () => {
     const local = memoryStorage();
     const session = memoryStorage();
-    const coordinator = createStorageCoordinator({ local, session, generation: 'generation-1' });
-    const storage = coordinator.forDefinition('reports');
+    const coordinator = createInternalStorageCoordinator({
+      local,
+      session,
+      generation: 'generation-1',
+    });
+    const storage = coordinator.forDefinitionInternal('reports');
     const sessionKey = storage.local.subscribeKey('draft', text, { defaultValue: 'empty' });
     const preferenceKey = storage.local.subscribeKey('density', text, {
       defaultValue: 'comfortable',
@@ -103,8 +107,11 @@ describe('storage session transitions', () => {
 
   it('does not reset storage for reordered groups, token refresh, or theme-only publication', () => {
     const local = memoryStorage();
-    const coordinator = createStorageCoordinator({ local, generation: 'stable-generation' });
-    const storage = coordinator.forDefinition('reports');
+    const coordinator = createInternalStorageCoordinator({
+      local,
+      generation: 'stable-generation',
+    });
+    const storage = coordinator.forDefinitionInternal('reports');
     const sessionKey = storage.local.subscribeKey('draft', text, { defaultValue: 'empty' });
     sessionKey.subscribe(() => {});
     sessionKey.set('keep this draft');
@@ -136,8 +143,8 @@ describe('storage session transitions', () => {
 
   it('rejects a semantic change when the shell reuses the current generation', () => {
     const local = memoryStorage();
-    const coordinator = createStorageCoordinator({ local, generation: 'generation-1' });
-    const storage = coordinator.forDefinition('reports');
+    const coordinator = createInternalStorageCoordinator({ local, generation: 'generation-1' });
+    const storage = coordinator.forDefinitionInternal('reports');
     const sessionKey = storage.local.subscribeKey('draft', text, { defaultValue: 'empty' });
     sessionKey.subscribe(() => {});
     sessionKey.set('must not publish');
@@ -159,24 +166,24 @@ describe('storage session transitions', () => {
   it('keeps a shell-supplied generation stable across reload-shaped coordinators', () => {
     const local = memoryStorage();
     const session = memoryStorage();
-    const firstCoordinator = createStorageCoordinator({
+    const firstCoordinator = createInternalStorageCoordinator({
       local,
       session,
       generation: 'reload-stable',
     });
     const firstKey = firstCoordinator
-      .forDefinition('reports')
+      .forDefinitionInternal('reports')
       .local.subscribeKey('draft', text, { defaultValue: 'empty' });
     firstKey.subscribe(() => {});
     firstKey.set('survives reload');
 
-    const reloadedCoordinator = createStorageCoordinator({
+    const reloadedCoordinator = createInternalStorageCoordinator({
       local,
       session,
       generation: 'reload-stable',
     });
     const reloadedKey = reloadedCoordinator
-      .forDefinition('reports')
+      .forDefinitionInternal('reports')
       .local.subscribeKey('draft', text, { defaultValue: 'empty' });
     expect(reloadedKey.getSnapshot()).toBe('survives reload');
   });

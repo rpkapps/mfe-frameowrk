@@ -10,7 +10,7 @@ history forwarding, live shell state, Rsbuild, and the current pnpm policy.
 
 The base commit's [CI run 35395826577](https://github.com/rpkapps/mfe-frameowrk/actions/runs/35395826577)
 passed static/behavior checks, Gate 0, production builds, and browser integration.
-That result belongs to the base commit, not this uncommitted Gate 2 change.
+That result belongs to the base commit, not the Gate 2 change.
 
 Gate 2 adds neutral definitions, Widget input/event validation, storage contracts
 and ownership, registry normalization, and bounded lifecycle phases. Core and host
@@ -45,11 +45,11 @@ resolved to `12.4.2` without adding a repository package-manager pin.
 
 - Frozen-lockfile installation passed with the existing dependency-script policy.
 - Full `check` passed: generation, Tecton artifact integrity, Prettier, ESLint,
-  all five strict TypeScript programs, package boundaries, **286 behavior tests
+  all five strict TypeScript programs, package boundaries, **288 behavior tests
   across 28 files**, and dependency build-policy verification.
 - Both Gate 0 conformance tests passed.
 - All three production builds passed.
-- Independent final storage/session validation passed **22 tests across two files**.
+- Final storage/session validation passed **24 tests across two files**.
 - Local Chromium installation timed out. No local browser pass is claimed for
   these changes; the retained browser suite requires fresh CI evidence.
 
@@ -64,4 +64,31 @@ on the main commit above. Gate 2 closeout remains pending fresh browser CI for
 this change; Gate 3 remains unstarted. See [storage contracts](storage-contracts.md)
 for the current neutral integration and explicit migration/reset examples.
 
-No push, merge, publication, or deployment is part of this local validation.
+The user authorized committing the implementation and opening PR #4. Its initial
+commit `9db1964fee7dcc684badc1500b497c5c839cba71` passed
+[CI run 35402124119](https://github.com/rpkapps/mfe-frameowrk/actions/runs/35402124119).
+The storage API conformance correction passed a fresh full local check and Terra's
+final review. Its fresh remote CI remains pending at this commit;
+the earlier run does not prove that correction. Merge, publication, and deployment
+still require explicit authorization.
+
+## Storage API conformance correction
+
+The naming audit found that Gate 2 had added reactive methods to the public
+imperative storage types. Section 5.13 defines `MfeStorage` as `key/remove/clear`
+and `MfeStorageKey` as `get/set/remove`, with `set(value: T)`.
+
+The correction restores those exact public types and runtime facades. Reactive
+bindings and functional updates move to the explicit host internal entry while
+sharing the same coordinator, stored values, and notification ownership. Public
+`set()` treats a function as invalid data and never executes it as an updater.
+
+The existing `AppHost` facade still needs its Gate 3 alignment (`appId`, `fallback`,
+and encapsulated host wiring). It is not a completed author contract. Current
+`createApp`, `useUser`, `useGroups`, `useTheme`, and lifecycle method names already
+match the specification and approved revisions.
+
+Regression coverage checks the exact public method sets, the setter's parameter
+type, function-value rejection without callback execution, and public writes
+notifying internal subscriptions. The correction preserves all existing storage
+and lifecycle tests.

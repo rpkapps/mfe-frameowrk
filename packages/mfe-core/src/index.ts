@@ -17,9 +17,7 @@ export type {
   StorageKeyOptions,
   StorageRetention,
   StorageSchema,
-  StorageSubscriptionOptions,
   StorageStore,
-  StorageUpdater,
 } from './storage-contracts';
 
 export { findJsonValidationIssue, freezeJsonValue, isJsonSerializable } from './json-validation';

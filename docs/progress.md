@@ -1,5 +1,18 @@
 # Implementation progress
 
+## Gate 2 storage API correction — 2026-09-18
+
+- Restored §5.13's exact public storage types and runtime facades:
+  `key/remove/clear` and `get/set(value)/remove`. Subscription machinery and
+  functional updates now live behind the host internal entry, sharing one store
+  with the imperative facade.
+- Added public API shape/type checks, callback nonexecution, and shared-notification
+  regression coverage. Fresh full local `check` passed **288 tests** and all static
+  and dependency-policy checks. Luna implemented; Terra's final review has no blockers.
+- Initial PR #4 commit `9db1964` passed CI. Fresh CI for this correction is pending.
+  The pre-existing `AppHost` prop/facade differences remain explicit Gate 3 work;
+  tracing remains deferred.
+
 ## Gate 2 local implementation — 2026-09-18
 
 - Continued from verified remote `main` at `9bfdce2f296928c3034b30e7e84029938471703b`,

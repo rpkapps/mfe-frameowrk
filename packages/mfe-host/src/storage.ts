@@ -7,9 +7,32 @@ import type {
   StorageRetention,
   StorageSchema,
   StorageStore,
-  StorageSubscriptionOptions,
-  StorageUpdater,
 } from '@company/mfe-core';
+
+/** Host-internal reactive binding; this is not part of the author storage contract. */
+export interface InternalStorageSubscriptionOptions<T> extends StorageKeyOptions<T> {
+  readonly defaultValue: T;
+}
+export type InternalStorageUpdater<T> = T | ((current: T | null) => T);
+export interface InternalMfeStorageKey<T> {
+  readonly get: () => T | null;
+  readonly getSnapshot: () => T | null;
+  readonly subscribe: (listener: () => void) => () => void;
+  readonly set: (value: InternalStorageUpdater<T>) => void;
+  readonly remove: () => void;
+}
+export interface InternalMfeStorage extends Omit<MfeStorage, 'key'> {
+  readonly key: <T>(
+    name: string,
+    schema: StorageSchema<T>,
+    options?: StorageKeyOptions<T>,
+  ) => InternalMfeStorageKey<T>;
+  readonly subscribeKey: <T>(
+    name: string,
+    schema: StorageSchema<T>,
+    options: InternalStorageSubscriptionOptions<T>,
+  ) => InternalMfeStorageKey<T>;
+}
 
 const ENVELOPE_MARKER = '@company/mfe-storage/v1';
 const DEFAULT_VERSION = 1;
@@ -88,7 +111,8 @@ class StorageEntry {
   declaration: Declaration | undefined;
   snapshot: Snapshot = { state: 'missing', raw: null };
   loaded = false;
-  private handle: MfeStorageKey<unknown> | undefined;
+  private internalHandle: InternalMfeStorageKey<unknown> | undefined;
+  private publicHandle: MfeStorageKey<unknown> | undefined;
   private resetPending = false;
 
   constructor(
@@ -101,9 +125,10 @@ class StorageEntry {
 
   bind<T>(
     schema: StorageSchema<T>,
-    options: StorageKeyOptions<T> | StorageSubscriptionOptions<T>,
+    options: StorageKeyOptions<T> | InternalStorageSubscriptionOptions<T>,
     allowDefault: boolean,
-  ): MfeStorageKey<T> {
+    publicFacade = false,
+  ): MfeStorageKey<T> | InternalMfeStorageKey<T> {
     const retention = options.retention ?? 'session';
     const version = options.version ?? DEFAULT_VERSION;
     if (!Number.isInteger(version) || version < 1) {
@@ -117,7 +142,7 @@ class StorageEntry {
       throw this.owner.fail('bind storage key', 'default value requires a subscribed binding');
     }
     if (hasDefault) {
-      const subscriptionOptions = options as StorageSubscriptionOptions<T>;
+      const subscriptionOptions = options as InternalStorageSubscriptionOptions<T>;
       try {
         defaultValue = this.owner.validateJsonValue(
           schema.parse(subscriptionOptions.defaultValue),
@@ -162,8 +187,8 @@ class StorageEntry {
       this.declaration = next;
     }
 
-    if (this.handle === undefined) {
-      this.handle = {
+    if (this.internalHandle === undefined) {
+      this.internalHandle = {
         get: () => this.readValue(),
         getSnapshot: () => this.readSnapshot(),
         subscribe: (listener) => this.subscribe(listener),
@@ -171,7 +196,15 @@ class StorageEntry {
         remove: () => this.removeValue(),
       };
     }
-    return this.handle as MfeStorageKey<T>;
+    if (!publicFacade) return this.internalHandle as InternalMfeStorageKey<T>;
+    if (this.publicHandle === undefined) {
+      this.publicHandle = {
+        get: () => this.readValue(),
+        set: (value) => this.setValue(value, false),
+        remove: () => this.removeValue(),
+      };
+    }
+    return this.publicHandle as MfeStorageKey<T>;
   }
 
   subscribe(listener: () => void): () => void {
@@ -222,7 +255,7 @@ class StorageEntry {
     if (changed) this.notify();
   }
 
-  setValue<T>(next: StorageUpdater<T>): void {
+  setValue<T>(next: InternalStorageUpdater<T>, allowUpdater = true): void {
     this.owner.assertActive();
     this.ensureCurrentStorageValue();
     const declaration = this.requireDeclaration();
@@ -234,7 +267,7 @@ class StorageEntry {
     let candidate: unknown;
     try {
       candidate =
-        typeof next === 'function'
+        allowUpdater && typeof next === 'function'
           ? (next as (current: T | null) => T)(this.currentValue() as T | null)
           : next;
       candidate = this.owner.validateJsonValue(declaration.parse(candidate), 'write');
@@ -503,6 +536,8 @@ class StorageEntry {
 class DefinitionStorage {
   readonly local: MfeStorage;
   readonly session: MfeStorage;
+  readonly internalLocal: InternalMfeStorage;
+  readonly internalSession: InternalMfeStorage;
   readonly entries = new Map<string, StorageEntry>();
 
   constructor(
@@ -511,6 +546,8 @@ class DefinitionStorage {
   ) {
     this.local = this.makeStore('local');
     this.session = this.makeStore('session');
+    this.internalLocal = this.makeInternalStore('local');
+    this.internalSession = this.makeInternalStore('session');
   }
 
   get generation(): string | undefined {
@@ -580,15 +617,48 @@ class DefinitionStorage {
     return {
       key: <T>(name: string, schema: StorageSchema<T>, options: StorageKeyOptions<T> = {}) => {
         const entry = this.entry(store, name);
-        return entry.bind(schema, options, false);
+        return entry.bind(schema, options, false, true) as MfeStorageKey<T>;
+      },
+      remove: (name) => {
+        const entry = this.entries.get(`${store}\0${name}`);
+        if (entry !== undefined) {
+          entry.removeValue();
+          return;
+        }
+        const target = this.target(store);
+        this.runStorage('remove', () => target.removeItem(`${this.id}:${name}`));
+      },
+      clear: () => {
+        const target = this.target(store);
+        const keys: string[] = [];
+        this.runStorage('clear', () => {
+          for (let index = 0; index < target.length; index += 1) {
+            const key = target.key(index);
+            if (key?.startsWith(`${this.id}:`)) keys.push(key);
+          }
+        });
+        for (const key of keys) {
+          const name = key.slice(this.id.length + 1);
+          this.runStorage('clear', () => target.removeItem(key));
+          this.entries.get(`${store}\0${name}`)?.externalRaw(null);
+        }
+      },
+    };
+  }
+
+  private makeInternalStore(store: StorageStore): InternalMfeStorage {
+    return {
+      key: <T>(name: string, schema: StorageSchema<T>, options: StorageKeyOptions<T> = {}) => {
+        const entry = this.entry(store, name);
+        return entry.bind(schema, options, false) as InternalMfeStorageKey<T>;
       },
       subscribeKey: <T>(
         name: string,
         schema: StorageSchema<T>,
-        options: StorageSubscriptionOptions<T>,
+        options: InternalStorageSubscriptionOptions<T>,
       ) => {
         const entry = this.entry(store, name);
-        return entry.bind(schema, options, true);
+        return entry.bind(schema, options, true) as InternalMfeStorageKey<T>;
       },
       remove: (name) => {
         const entry = this.entries.get(`${store}\0${name}`);
@@ -835,6 +905,11 @@ export interface MfeDefinitionStorage {
   readonly session: MfeStorage;
 }
 
+export interface InternalMfeDefinitionStorage extends MfeDefinitionStorage {
+  readonly local: InternalMfeStorage;
+  readonly session: InternalMfeStorage;
+}
+
 export interface StorageCoordinator {
   readonly forDefinition: (id: string) => MfeDefinitionStorage;
   readonly transition: (generation: string) => boolean;
@@ -842,8 +917,45 @@ export interface StorageCoordinator {
   readonly dispose: () => void;
 }
 
+export interface InternalStorageCoordinator extends StorageCoordinator {
+  readonly forDefinitionInternal: (id: string) => InternalMfeDefinitionStorage;
+}
+
+const publicDefinition = (definition: DefinitionStorage): MfeDefinitionStorage => ({
+  id: definition.id,
+  local: definition.local,
+  session: definition.session,
+});
+
 export function createStorageCoordinator(options: StorageCoordinatorOptions): StorageCoordinator {
-  return new StorageCoordinatorImpl(options);
+  const coordinator = new StorageCoordinatorImpl(options);
+  return {
+    forDefinition: (id) => publicDefinition(coordinator.forDefinition(id)),
+    transition: coordinator.transition.bind(coordinator),
+    setKnownDefinitionIds: coordinator.setKnownDefinitionIds.bind(coordinator),
+    dispose: coordinator.dispose.bind(coordinator),
+  };
+}
+
+/** Internal host seam for reactive storage bindings and functional updates. */
+export function createInternalStorageCoordinator(
+  options: StorageCoordinatorOptions,
+): InternalStorageCoordinator {
+  const coordinator = new StorageCoordinatorImpl(options);
+  return {
+    forDefinition: (id) => publicDefinition(coordinator.forDefinition(id)),
+    transition: coordinator.transition.bind(coordinator),
+    setKnownDefinitionIds: coordinator.setKnownDefinitionIds.bind(coordinator),
+    dispose: coordinator.dispose.bind(coordinator),
+    forDefinitionInternal: (id) => {
+      const definition = coordinator.forDefinition(id);
+      return {
+        ...definition,
+        local: definition.internalLocal,
+        session: definition.internalSession,
+      };
+    },
+  };
 }
 
 export type { StorageEventLike };

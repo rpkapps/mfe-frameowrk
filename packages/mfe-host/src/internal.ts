@@ -10,3 +10,12 @@ export type {
   MountLifecycle,
   MountLifecycleOptions,
 } from './mount-lifecycle';
+export { createInternalStorageCoordinator } from './storage';
+export type {
+  InternalMfeDefinitionStorage,
+  InternalMfeStorage,
+  InternalMfeStorageKey,
+  InternalStorageCoordinator,
+  InternalStorageSubscriptionOptions,
+  InternalStorageUpdater,
+} from './storage';

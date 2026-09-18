@@ -26,13 +26,17 @@ const reports = coordinator.forDefinition('reports');
 const density = reports.local.key('density', densitySchema, {
   retention: 'preference',
 });
-
-const subscribed = reports.local.subscribeKey('density', densitySchema, {
-  defaultValue: 'comfortable',
-  retention: 'preference',
-});
-const unsubscribe = subscribed.subscribe(onDensityChanged);
+const current = density.get();
+density.set('compact');
+density.remove();
 ```
+
+The public `MfeStorageKey` facade has exactly `get()`, `set(value)`, and
+`remove()`. `MfeStorage` has `key()`, `remove(name)`, and `clear()`. Reactive
+binding and functional update support are host-internal capabilities exposed
+through `@company/mfe-host/internal`; they are not fields on public key objects.
+The internal coordinator seam retains shared declarations, snapshots, and
+subscriptions for framework-owned rendering integration.
 
 `forDefinition(id)` owns the `<id>:<key>` prefix. The same coordinator and
 definition ID share one key entry across callers and mounts. Active declarations
@@ -52,7 +56,7 @@ framework session records for known or unknown definition IDs, including
 unmounted definitions. Preference records remain. A generation token cannot be
 reused after it is retired.
 
-Use `subscribeKey` when a missing value needs a validated default. The default
+Internal host integrations use a subscribed binding when a missing value needs a validated default. The default
 is returned by `getSnapshot()` only while the key is missing; it is never
 persisted. `get()` returns `null` for a missing key. An imperative `key()`
 binding does not accept `defaultValue`. Reads, writes, and migrations validate
@@ -112,3 +116,10 @@ key must expose an explicit action that calls `reports.local.remove('density')`
 or, for all records owned by that definition in that store,
 `reports.local.clear()`. These operations never clear unrelated shell or
 third-party records.
+
+## Existing Gate 3 contract debt
+
+The current `AppHost` implementation still uses its existing `id`,
+`renderStatus`, and `runtime` properties. Aligning those properties with the
+specification's `appId` and `fallback` contract remains a separate Gate 3 task
+under the existing gate ordering.

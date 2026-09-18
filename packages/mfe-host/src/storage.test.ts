@@ -1,7 +1,8 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, expectTypeOf, it, vi } from 'vitest';
 import { z } from 'zod';
 import type { StorageEventLike } from './storage';
-import { createStorageCoordinator } from './storage';
+import { createStorageCoordinator as createPublicStorageCoordinator } from '@company/mfe-host';
+import { createInternalStorageCoordinator } from '@company/mfe-host/internal';
 
 function memoryStorage(): Storage {
   const values = new Map<string, string>();
@@ -41,9 +42,9 @@ describe('host storage coordinator', () => {
   it('shares same-id handles and notifications while separating stores and IDs', () => {
     const local = memoryStorage();
     const session = memoryStorage();
-    const coordinator = createStorageCoordinator({ local, session, generation: 'g1' });
-    const first = coordinator.forDefinition('reports');
-    const second = coordinator.forDefinition('reports');
+    const coordinator = createInternalStorageCoordinator({ local, session, generation: 'g1' });
+    const first = coordinator.forDefinitionInternal('reports');
+    const second = coordinator.forDefinitionInternal('reports');
     const firstKey = first.local.subscribeKey('density', text, {
       defaultValue: 'comfortable',
       retention: 'preference',
@@ -75,8 +76,8 @@ describe('host storage coordinator', () => {
     const local = memoryStorage();
     const thirdParty = JSON.stringify({ retention: 'session', value: 'do-not-touch' });
     local.setItem('third-party:key', thirdParty);
-    const coordinator = createStorageCoordinator({ local, generation: 'g1' });
-    const storage = coordinator.forDefinition('reports');
+    const coordinator = createInternalStorageCoordinator({ local, generation: 'g1' });
+    const storage = coordinator.forDefinitionInternal('reports');
     const key = storage.local.subscribeKey('one', text, {
       defaultValue: 'default',
       retention: 'preference',
@@ -93,8 +94,8 @@ describe('host storage coordinator', () => {
 
   it('validates defaults and values, and never persists a default read', () => {
     const local = memoryStorage();
-    const coordinator = createStorageCoordinator({ local, generation: 'g1' });
-    const storage = coordinator.forDefinition('settings');
+    const coordinator = createInternalStorageCoordinator({ local, generation: 'g1' });
+    const storage = coordinator.forDefinitionInternal('settings');
     const key = storage.local.subscribeKey('density', z.enum(['comfortable', 'compact']), {
       defaultValue: 'comfortable',
       retention: 'preference',
@@ -111,8 +112,8 @@ describe('host storage coordinator', () => {
 
   it('resolves updater writes from the latest valid representation and suppresses serialized no-ops', () => {
     const local = memoryStorage();
-    const coordinator = createStorageCoordinator({ local, generation: 'g1' });
-    const key = coordinator.forDefinition('counter').local.subscribeKey('value', number, {
+    const coordinator = createInternalStorageCoordinator({ local, generation: 'g1' });
+    const key = coordinator.forDefinitionInternal('counter').local.subscribeKey('value', number, {
       defaultValue: 0,
       retention: 'preference',
     });
@@ -129,12 +130,12 @@ describe('host storage coordinator', () => {
     const local = memoryStorage();
     const source = eventSource();
     const parse = vi.fn((value: unknown) => text.parse(value));
-    const coordinator = createStorageCoordinator({
+    const coordinator = createInternalStorageCoordinator({
       local,
       generation: 'g1',
       subscribeStorageEvents: (listener) => source.subscribe(listener),
     });
-    const storage = coordinator.forDefinition('events');
+    const storage = coordinator.forDefinitionInternal('events');
     const first = storage.local.key('first', { parse } as unknown as typeof text, {
       retention: 'preference',
     });
@@ -159,11 +160,51 @@ describe('host storage coordinator', () => {
     expect(parse).toHaveBeenCalledTimes(1);
   });
 
+  it('keeps the public key facade imperative and does not execute function values', () => {
+    const local = memoryStorage();
+    const coordinator = createPublicStorageCoordinator({ local, generation: 'g1' });
+    const definition = coordinator.forDefinition('public');
+    expect(Object.keys(definition).sort()).toEqual(['id', 'local', 'session']);
+    expect('internalLocal' in definition).toBe(false);
+    const key = definition.local.key('value', text, {
+      retention: 'preference',
+    });
+    const store = definition.local;
+    const setText: (value: string) => void = key.set;
+    expect(setText).toBe(key.set);
+    expectTypeOf<Parameters<typeof key.set>>().toEqualTypeOf<[value: string]>();
+    expect(Object.keys(key).sort()).toEqual(['get', 'remove', 'set']);
+    expect(Object.keys(store).sort()).toEqual(['clear', 'key', 'remove']);
+    key.set('before');
+    const callback = vi.fn(() => 'after');
+    expect(() => (key.set as unknown as (value: unknown) => void)(callback)).toThrow(
+      /schema validation failed/,
+    );
+    expect(callback).not.toHaveBeenCalled();
+    expect(key.get()).toBe('before');
+  });
+
+  it('shares public handles with the host internal subscription seam', () => {
+    const local = memoryStorage();
+    const coordinator = createInternalStorageCoordinator({ local, generation: 'g1' });
+    const publicKey = coordinator.forDefinition('shared').local.key('value', text, {
+      retention: 'preference',
+    });
+    const internalKey = coordinator
+      .forDefinitionInternal('shared')
+      .local.subscribeKey('value', text, { defaultValue: 'empty', retention: 'preference' });
+    const listener = vi.fn();
+    internalKey.subscribe(listener);
+    publicKey.set('updated');
+    expect(internalKey.getSnapshot()).toBe('updated');
+    expect(listener).toHaveBeenCalledTimes(1);
+  });
+
   it('requires a generation for session retained reads and fences both stores on transition', () => {
     const local = memoryStorage();
     const session = memoryStorage();
-    const coordinator = createStorageCoordinator({ local, session, generation: 'g1' });
-    const storage = coordinator.forDefinition('mounted');
+    const coordinator = createInternalStorageCoordinator({ local, session, generation: 'g1' });
+    const storage = coordinator.forDefinitionInternal('mounted');
     const sessionKey = storage.local.subscribeKey('draft', text, { defaultValue: 'empty' });
     const preferenceKey = storage.local.subscribeKey('density', text, {
       defaultValue: 'comfortable',
@@ -192,8 +233,8 @@ describe('host storage coordinator', () => {
 
   it('migrates once, preserves failures, and rejects future or unsupported records', () => {
     const local = memoryStorage();
-    const coordinator = createStorageCoordinator({ local, generation: 'g1' });
-    const storage = coordinator.forDefinition('migrations');
+    const coordinator = createInternalStorageCoordinator({ local, generation: 'g1' });
+    const storage = coordinator.forDefinitionInternal('migrations');
     local.setItem(
       'migrations:value',
       JSON.stringify({
@@ -229,8 +270,8 @@ describe('host storage coordinator', () => {
 
   it('does not commit a migration after a reentrant generation transition', () => {
     const local = memoryStorage();
-    const coordinator = createStorageCoordinator({ local, generation: 'g1' });
-    const storage = coordinator.forDefinition('race');
+    const coordinator = createInternalStorageCoordinator({ local, generation: 'g1' });
+    const storage = coordinator.forDefinitionInternal('race');
     local.setItem(
       'race:value',
       JSON.stringify({
@@ -251,8 +292,8 @@ describe('host storage coordinator', () => {
   });
   it('rejects markerless records and imperative defaults explicitly', () => {
     const local = memoryStorage();
-    const coordinator = createStorageCoordinator({ local, generation: 'g1' });
-    const storage = coordinator.forDefinition('strict');
+    const coordinator = createInternalStorageCoordinator({ local, generation: 'g1' });
+    const storage = coordinator.forDefinitionInternal('strict');
     local.setItem(
       'strict:value',
       JSON.stringify({ version: 1, retention: 'preference', value: 'old' }),
@@ -267,15 +308,15 @@ describe('host storage coordinator', () => {
   });
   it('rejects reuse of a retired generation even when physical deletion was incomplete', () => {
     const local = memoryStorage();
-    const coordinator = createStorageCoordinator({ local, generation: 'g1' });
+    const coordinator = createInternalStorageCoordinator({ local, generation: 'g1' });
     coordinator.transition('g2');
     expect(() => coordinator.transition('g1')).toThrow(/already retired/);
   });
   it('refreshes between snapshot read and subscription without duplicate notifications', () => {
     const local = memoryStorage();
-    const coordinator = createStorageCoordinator({ local, generation: 'g1' });
+    const coordinator = createInternalStorageCoordinator({ local, generation: 'g1' });
     const key = coordinator
-      .forDefinition('race')
+      .forDefinitionInternal('race')
       .local.key('value', text, { retention: 'preference' });
     expect(key.getSnapshot()).toBeNull();
     local.setItem(
@@ -295,7 +336,7 @@ describe('host storage coordinator', () => {
 
   it('returns transition status and rejects reuse of retired generations', () => {
     const local = memoryStorage();
-    const coordinator = createStorageCoordinator({ local, generation: 'g1' });
+    const coordinator = createInternalStorageCoordinator({ local, generation: 'g1' });
     expect(coordinator.transition('g1')).toBe(false);
     expect(coordinator.transition('g2')).toBe(true);
     expect(() => coordinator.transition('g1')).toThrow(/already retired/);
@@ -304,12 +345,12 @@ describe('host storage coordinator', () => {
   it('disposes existing bindings, listeners, and queued events', () => {
     const local = memoryStorage();
     const source = eventSource();
-    const coordinator = createStorageCoordinator({
+    const coordinator = createInternalStorageCoordinator({
       local,
       generation: 'g1',
       subscribeStorageEvents: (listener) => source.subscribe(listener),
     });
-    const key = coordinator.forDefinition('disposed').local.key('value', text, {
+    const key = coordinator.forDefinitionInternal('disposed').local.key('value', text, {
       retention: 'preference',
     });
     const listener = vi.fn();
@@ -336,7 +377,7 @@ describe('host storage coordinator', () => {
 
   it('preserves a failed migration record and surfaces the structured error', () => {
     const local = memoryStorage();
-    const coordinator = createStorageCoordinator({ local, generation: 'g1' });
+    const coordinator = createInternalStorageCoordinator({ local, generation: 'g1' });
     const raw = JSON.stringify({
       marker: '@company/mfe-storage/v1',
       version: 1,
@@ -344,7 +385,7 @@ describe('host storage coordinator', () => {
       value: 'old',
     });
     local.setItem('migration-failure:value', raw);
-    const key = coordinator.forDefinition('migration-failure').local.key('value', text, {
+    const key = coordinator.forDefinitionInternal('migration-failure').local.key('value', text, {
       retention: 'preference',
       version: 2,
       migrate: () => {
@@ -358,12 +399,12 @@ describe('host storage coordinator', () => {
   it('keeps the raw record and cached value when a quota write fails', () => {
     const local = memoryStorage();
     const diagnostics: unknown[] = [];
-    const coordinator = createStorageCoordinator({
+    const coordinator = createInternalStorageCoordinator({
       local,
       generation: 'g1',
       reportError: (error) => diagnostics.push(error),
     });
-    const key = coordinator.forDefinition('quota').local.key('value', text, {
+    const key = coordinator.forDefinitionInternal('quota').local.key('value', text, {
       retention: 'preference',
     });
     key.set('before');
@@ -385,13 +426,13 @@ describe('host storage coordinator', () => {
     const local = memoryStorage();
     const source = eventSource();
     const diagnostics: unknown[] = [];
-    const coordinator = createStorageCoordinator({
+    const coordinator = createInternalStorageCoordinator({
       local,
       generation: 'g1',
       subscribeStorageEvents: (listener) => source.subscribe(listener),
       reportError: (error) => diagnostics.push(error),
     });
-    const storage = coordinator.forDefinition('blocked');
+    const storage = coordinator.forDefinitionInternal('blocked');
     const draft = storage.local.subscribeKey('draft', text, { defaultValue: 'empty' });
     const preference = storage.local.subscribeKey('density', text, {
       defaultValue: 'comfortable',
@@ -420,12 +461,12 @@ describe('host storage coordinator', () => {
   it('caches external malformed, schema-invalid, and clear-read failures as errors', () => {
     const local = memoryStorage();
     const source = eventSource();
-    const coordinator = createStorageCoordinator({
+    const coordinator = createInternalStorageCoordinator({
       local,
       generation: 'g1',
       subscribeStorageEvents: (listener) => source.subscribe(listener),
     });
-    const storage = coordinator.forDefinition('external');
+    const storage = coordinator.forDefinitionInternal('external');
     const malformed = storage.local.key('malformed', text, { retention: 'preference' });
     const invalid = storage.local.key('invalid', text, { retention: 'preference' });
     const cleared = storage.local.key('cleared', text, { retention: 'preference' });
