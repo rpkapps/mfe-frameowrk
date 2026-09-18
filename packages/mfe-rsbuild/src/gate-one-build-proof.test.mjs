@@ -57,7 +57,9 @@ it('builds a bounded remote with compiled and explicitly excluded adapter consum
     );
     expect(jsText).toMatch(/react\/compiler-runtime/);
     const discoveryChunk = await Promise.all(
-      js.filter((file) => file.includes('src_components_discovery-screen')).map((file) => readFile(file, 'utf8')),
+      js
+        .filter((file) => file.includes('src_components_discovery-screen'))
+        .map((file) => readFile(file, 'utf8')),
     ).then((texts) => texts.join('\n'));
     expect(discoveryChunk).toContain('function CompiledAdapterConsumer');
     expect(discoveryChunk).toContain('function UncompiledAdapterConsumer');
