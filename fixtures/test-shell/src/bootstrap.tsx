@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client';
 import { createAppRuntime, createBrowserNavigation } from '@company/mfe-host';
 import { AppHost, createReactAdapter } from '@company/mfe-react';
 import { watchRemoteUpdates } from '@company/mfe-rsbuild/runtime';
+import { Button } from '@tecton/react/components/button';
 import { registry, overrideWarnings, remotes } from './registry';
 import { TestShell, AppFailure } from './shell';
 import './global.css';
@@ -37,9 +38,9 @@ function DualDiscovery({ theme }: { readonly theme: 'dark' | 'light' }) {
         <div className="flex items-center gap-2 border-b p-2">
           <strong>First Discovery mount</strong>
           {firstVisible && (
-            <button type="button" onClick={() => setFirstVisible(false)}>
+            <Button variant="outline" onPress={() => setFirstVisible(false)}>
               Dispose first mount
-            </button>
+            </Button>
           )}
         </div>
         {firstVisible && (
@@ -56,16 +57,16 @@ function DualDiscovery({ theme }: { readonly theme: 'dark' | 'light' }) {
       <div data-testid="dual-second" className="flex min-h-0 min-w-0 flex-col rounded border">
         <div className="flex items-center gap-2 border-b p-2">
           <strong>Second Discovery mount</strong>
-          <button
-            type="button"
-            onClick={() => {
+          <Button
+            variant="outline"
+            onPress={() => {
               navigation
                 .navigate('/discovery/')
                 .catch((cause: unknown) => window.reportError(cause));
             }}
           >
             Exit nested boundary
-          </button>
+          </Button>
         </div>
         <AppHost
           runtime={runtime}

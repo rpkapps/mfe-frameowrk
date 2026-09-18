@@ -238,8 +238,8 @@ test('isolates two real MF2 mounts of one generated App and disposes one indepen
   await page.goto('/discovery/project/?dual=1');
   const first = page.getByTestId('dual-first');
   const second = page.getByTestId('dual-second');
-  await expect(first.getByText('First mount', { exact: false })).toBeVisible();
-  await expect(second.getByText('Second mount', { exact: false })).toBeVisible();
+  await expect(first.getByTestId('discovery-session')).toHaveText(/First mount/);
+  await expect(second.getByTestId('discovery-session')).toHaveText(/Second mount/);
   await expect(first.getByRole('heading', { name: 'Orion Discovery', exact: true })).toBeVisible();
   await expect(second.getByRole('heading', { name: 'Orion Discovery', exact: true })).toBeVisible();
   await expect(first.getByTestId('discovery-session')).toHaveText(/First mount/);
@@ -251,6 +251,9 @@ test('isolates two real MF2 mounts of one generated App and disposes one indepen
 
   await second.getByRole('link', { name: 'Framing', exact: true }).click();
   await expect(page).toHaveURL(/\/discovery\/project\/framing\?dual=1$/);
+  await expect(
+    second.getByRole('heading', { name: 'A shared frame for the next decision', exact: true }),
+  ).toBeVisible();
   await expect(first.getByTestId('discovery-loader-context')).toHaveText('Loaded for first-mount');
   await expect(second.getByTestId('discovery-loader-context')).toHaveText(
     'Loaded for second-mount',
@@ -260,21 +263,28 @@ test('isolates two real MF2 mounts of one generated App and disposes one indepen
   await second.getByRole('button', { name: 'Exit nested boundary' }).click();
   const blocker = second.getByRole('dialog', { name: 'Leave Discovery?' });
   await expect(blocker).toBeVisible();
+  await expect(second.locator('[role="dialog"]')).toHaveCount(1);
   await expect(first.getByRole('dialog')).toHaveCount(0);
   await expect(page).toHaveURL(/\/discovery\/project\/framing\?dual=1$/);
+  await page.keyboard.press('Escape');
+  await expect(blocker).toBeHidden();
+  await expect(second.getByRole('button', { name: 'Exit nested boundary' })).toBeFocused();
+  await second.getByRole('button', { name: 'Exit nested boundary' }).click();
+  await expect(blocker).toBeVisible();
   await blocker.getByRole('button', { name: 'Stay here' }).click();
   await expect(blocker).toBeHidden();
-  await expect(second.getByText('Second mount', { exact: false })).toBeVisible();
+  await expect(second.getByTestId('discovery-session')).toHaveText(/Second mount/);
 
   await first.getByRole('button', { name: 'Dispose first mount' }).click();
   await expect(first.getByRole('heading', { name: 'Orion Discovery', exact: true })).toHaveCount(0);
   await expect(second.getByRole('heading', { name: 'Orion Discovery', exact: true })).toBeVisible();
-  await expect(second.getByText('Second mount', { exact: false })).toBeVisible();
+  await expect(second.getByTestId('discovery-session')).toHaveText(/Second mount/);
   await expect(second.getByTestId('discovery-loader-context')).toHaveText(
     'Loaded for second-mount',
   );
   await second.getByRole('link', { name: 'Overview', exact: true }).click();
   await expect(page).toHaveURL(/\/discovery\/project\/\?dual=1$/);
+  await expect(second.getByRole('heading', { name: 'Orion Discovery', exact: true })).toBeVisible();
   await expect(second.getByTestId('discovery-loader-context')).toHaveText(
     'Loaded for second-mount',
   );
