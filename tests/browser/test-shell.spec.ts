@@ -1,7 +1,7 @@
 import { readFile, writeFile } from 'node:fs/promises';
 
 import { expect, test as browserTest } from '@playwright/test';
-import type { Locator, Page, TestInfo } from '@playwright/test';
+import type { Locator, Page, Route, TestInfo } from '@playwright/test';
 
 const test = browserTest.extend<{ browserErrors: string[] }>({
   browserErrors: [
@@ -536,4 +536,142 @@ test('reloads a changed remote route while preserving its URL and shell theme', 
     await expect(page.getByText(marker, { exact: true })).toHaveCount(0, { timeout: 45_000 });
   }
   await expect(page.getByRole('region', { name: 'Project framing' })).toBeVisible();
+});
+
+test('correlates awaited nested spans and request headers across two real MF2 remotes', async ({
+  page,
+}) => {
+  const requests: string[] = [];
+  const completed: string[] = [];
+  const pending: Array<{ route: Route; header: string }> = [];
+  const waiters: Array<() => void> = [];
+  await page.route('**/__trace-probe', async (route) => {
+    const header = route.request().headers().traceparent ?? '';
+    requests.push(header);
+    pending.push({ route, header });
+    if (pending.length < 4) {
+      await new Promise<void>((resolve) => waiters.push(resolve));
+      return;
+    }
+    for (const item of [...pending].reverse()) {
+      completed.push(item.header);
+      await item.route.fulfill({ status: 204, body: '' });
+    }
+    pending.length = 0;
+    for (const resolve of waiters.splice(0)) resolve();
+  });
+  await page.addInitScript(() => {
+    const currentWindow = window as unknown as Record<string, unknown>;
+    currentWindow.__mfeNativeRefs = {
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- snapshot native identity for patch detection.
+      pushState: history.pushState,
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- snapshot native identity for patch detection.
+      replaceState: history.replaceState,
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- snapshot native identity for patch detection.
+      fetch: window.fetch,
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- snapshot native identity for patch detection.
+      addEventListener: window.addEventListener,
+      // eslint-disable-next-line @typescript-eslint/unbound-method -- snapshot native identity for patch detection.
+      removeEventListener: window.removeEventListener,
+    };
+  });
+  await page.goto('/discovery/?trace=1&dualremote=1');
+  await expect(page.getByTestId('trace-dual')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Orion Discovery', exact: true })).toBeVisible();
+  await expect(
+    page.getByRole('heading', { name: 'Geologic Background', exact: true }),
+  ).toBeVisible();
+  await expect.poll(() => requests.length).toBe(4);
+  await expect.poll(() => completed.length).toBe(4);
+  expect(completed).toEqual([...requests].reverse());
+  await expect
+    .poll(async () =>
+      page.evaluate(async () => {
+        const probe = (
+          window as Window & { __mfeTraceProbe?: { records(): Promise<readonly unknown[]> } }
+        ).__mfeTraceProbe;
+        return (await probe?.records())?.length ?? 0;
+      }),
+    )
+    .toBe(8);
+
+  const records = await page.evaluate(async () => {
+    const probe = (
+      window as Window & {
+        __mfeTraceProbe?: {
+          records(): Promise<
+            readonly { name: string; traceId: string; spanId: string; parentSpanId?: string }[]
+          >;
+        };
+      }
+    ).__mfeTraceProbe;
+    return (await probe?.records()) ?? [];
+  });
+  expect(records).toHaveLength(8);
+  for (const rootName of [
+    'discovery.first',
+    'discovery.second',
+    'geology.first',
+    'geology.second',
+  ]) {
+    const root = records.find((record) => record.name === rootName);
+    const child = records.find((record) => record.name === `${rootName}.request`);
+    expect(root, rootName).toBeDefined();
+    expect(child, `${rootName}.request`).toMatchObject({ parentSpanId: root?.spanId });
+    expect(child?.traceId).toBe(root?.traceId);
+  }
+  expect(
+    new Set(records.filter((record) => !record.parentSpanId).map((record) => record.traceId)).size,
+  ).toBe(4);
+  expect(requests.every((header) => /^00-[\da-f]{32}-[\da-f]{16}-01$/.test(header))).toBe(true);
+  const childKeys = new Set(
+    records
+      .filter((record) => record.parentSpanId)
+      .map((record) => `${record.traceId}:${record.spanId}`),
+  );
+  expect(
+    new Set(
+      requests.map((header) => {
+        const [, traceId, spanId] = header.split('-');
+        return `${traceId}:${spanId}`;
+      }),
+    ),
+  ).toEqual(childKeys);
+  expect(
+    await page.evaluate(() => {
+      const refs = (window as unknown as { __mfeNativeRefs: Record<string, unknown> })
+        .__mfeNativeRefs;
+      return [
+        history.pushState === refs.pushState,
+        history.replaceState === refs.replaceState,
+        window.fetch === refs.fetch,
+        window.addEventListener === refs.addEventListener,
+        window.removeEventListener === refs.removeEventListener,
+      ];
+    }),
+  ).toEqual([true, true, true, true, true]);
+  const ambient = await page.evaluate(async () => {
+    const probe = (
+      window as Window & {
+        __mfeTraceProbe?: {
+          ambientControl(): Promise<
+            readonly { name: string; traceId: string; spanId: string; parentSpanId?: string }[]
+          >;
+        };
+      }
+    ).__mfeTraceProbe;
+    return (await probe?.ambientControl()) ?? [];
+  });
+  const ambientRoot = ambient.find((record) => record.name === 'ambient-control');
+  const ambientSync = ambient.find((record) => record.name === 'ambient-sync');
+  const ambientAwait = ambient.find((record) => record.name === 'ambient-await');
+  expect(ambientSync?.parentSpanId).toBe(ambientRoot?.spanId);
+  expect(ambientAwait?.parentSpanId).toBeUndefined();
+  expect(ambientAwait?.traceId).not.toBe(ambientRoot?.traceId);
+
+  await page.evaluate(async () => {
+    const probe = (window as Window & { __mfeTraceProbe?: { dispose(): Promise<void> } })
+      .__mfeTraceProbe;
+    await probe?.dispose();
+  });
 });

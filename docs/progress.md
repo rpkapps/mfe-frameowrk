@@ -16,24 +16,36 @@
 - Portal forwarding is supplied upstream in
   [Tecton PR #24](https://github.com/rpkapps/tecton-ui-1/pull/24), which covers
   internal forwarding for supported React Aria Components overlay wrappers;
-  consumers use the Tecton API. Durable upstream head
-  `8b1aa66c2a600b8c32ebef6d98bafb6121e940d7` is now pinned. The upstream
-  full suite passes 312 tests across 21 files, with typecheck and diff check
-  passing. The canonical registry patch and full build pass.
-  The environment's network proxy rejected the registry request (`NotAllowed`),
-  so full `generated:check` remains unverified.
+  consumers use the Tecton API. The earlier durable head
+  `8b1aa66c2a600b8c32ebef6d98bafb6121e940d7` is historical. The current
+  framework canonical artifact is repinned to upstream head
+  `576a766a4af5401c7f232a5f9f8460acf9e31ae6`; independent validation reports
+  the upstream 312-test, 21-file suite and workspace typecheck passing. Its
+  `generated:check` also passed in CI run
+  [35385630925](https://github.com/rpkapps/mfe-frameowrk/actions/runs/35385630925)
+  (59 checks reported, 0 failures).
 - CI run [35380935168](https://github.com/rpkapps/mfe-frameowrk/actions/runs/35380935168)
   at exact commit `adf97ab9412b50501e6cfc7781a7d6f6c30a036a` passes 208
   behavior tests, both Gate 0 tests, all three production builds, and all 13
   Chromium browser tests in 39s. The dual-mount scoped Tecton Dialog proof
   covers Escape, focus, and disposal. Firefox and WebKit remain untested.
+- Latest local `check` passes 210 behavior tests across 23 files, formatting,
+  lint, all workspace types, package boundaries, Tecton integrity, and build
+  policy. The browser proof remains pending its CI upload/approval; an external
+  GitHub tree publish was blocked by automatic review, so no remote commit or
+  ref was created. Gate 1 is not complete.
+- `node scripts/build-test-apps.mjs` exits 0 for all three production builds;
+  emitted remote bundles contain no OTel or `StackContextManager` imports and
+  preserve the native `await` needed by the proof. The 14 browser checks are
+  listed but have not executed.
 - Gate 1 remains open. The reviewed OTel/Zone candidate does not preserve active
-  parentage through native `await` in the current ES2022 output. The trace
-  document records a decision proposal only: framework-managed operation
-  boundaries with explicit telemetry-service parameters for non-React utilities,
-  retaining non-active/manual `startSpan` and explicit `end()`, or a separately
-  proven shell async-context runtime with downleveling. There is no emitted
-  browser tracer proof and no approved contract revision yet.
+  parentage through native `await` in the current ES2022 output. The current
+  feasibility record documents the existing contract: framework-managed operation
+  boundaries may use an internal explicit carrier, while arbitrary author functions
+  receive no automatic parentage promise. The public `startSpan`/`startActiveSpan`
+  and standard `#mfe/fetch` semantics remain unchanged. The local Node
+  characterization and fixture source do not replace the pending emitted-browser
+  proof.
 
 ## Gate 1 bounded evidence — 2026-09-18
 
@@ -50,27 +62,23 @@
 - Async tracing remains an unproven Gate 1 feasibility requirement. The reviewed
   `@opentelemetry/api` 1.9.1 / `@opentelemetry/context-zone-peer-dep` 2.11.0 /
   `zone.js` 0.16.0 probe lost parentage after `await` under the repository's ES2022
-  output; no dependency was added to the repository. The feasibility record proposes,
-  pending explicit approval, operation-bound propagation through framework-managed
-  route/Query/request boundaries with explicit service parameters for non-React
-  utilities. Automatic parentage for arbitrary native `await` remains unpromised under
-  that proposal. The alternative is a shell async-context runtime plus async
-  downleveling, with its bundle, patching, target, and emitted-browser proofs recorded.
-  Gate 1 remains open and no public trace contract or implementation was added.
+  output; no dependency was added to the repository. The active fixture exercises an
+  internal explicit carrier only at a framework-managed request boundary. This is
+  permitted by the existing contract and does not authorize a new public handle or
+  automatic parentage for arbitrary author functions. The local Node characterization
+  is recorded; the emitted-browser proof remains pending and Gate 1 stays open.
 
-## Trace feasibility decision proposal — 2026-09-18
+## Trace feasibility status — 2026-09-18
 
 The reviewed Zone-based candidate did not preserve active parentage through awaited
 continuations in the ES2022 runtime probe. This narrows the evidence for that candidate
-without claiming that all browser mechanisms are exhausted. Gate 1 §5.16.3 and Gate 1
-item 11 still require an explicit decision: approve operation-bound context propagation
-through framework-managed route/Query/request boundaries, with explicit telemetry-service
-parameters for non-React utilities, or approve a shell async-context runtime plus async
-downleveling and its required emitted-browser proofs. The proposed operation-bound
-contract keeps OTel-style `startSpan`/`startActiveSpan` and manual `end()` semantics and
-does not promise automatic parentage across arbitrary native `await`. No new public
-`run`/`withContext`/`trace` API is proposed blindly. This is a proposal only; Gate 1
-remains open pending approval and proof.
+without claiming that all browser mechanisms are exhausted. Gate 1 §5.16.3 and item 11
+require the framework-managed operation boundary to be proven in emitted browser code.
+The active fixture uses an internal explicit carrier after a native `await`, while keeping
+OTel-style `startSpan`/`startActiveSpan`, manual `end()`, and the standard `#mfe/fetch`
+signature unchanged. It makes no promise of automatic parentage across arbitrary native
+`await`; no new public `run`/`withContext`/`trace` or parent-handle API is proposed. Gate 1
+remains open pending the browser run.
 
 ## Rsbuild surface migration — 2026-09-18
 

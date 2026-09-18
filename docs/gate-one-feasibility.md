@@ -16,17 +16,27 @@
 - Portal forwarding is supplied upstream in
   [Tecton PR #24](https://github.com/rpkapps/tecton-ui-1/pull/24), covering
   internal forwarding for supported React Aria Components overlay wrappers;
-  consumers use the Tecton API. Durable head
-  `8b1aa66c2a600b8c32ebef6d98bafb6121e940d7` is pinned. The upstream full
-  suite passes 312 tests across 21 files, with typecheck and diff check passing.
-  The canonical registry patch and full build pass.
-  The environment's network proxy rejected the registry request (`NotAllowed`),
-  so full `generated:check` remains unverified.
+  consumers use the Tecton API. The earlier durable head
+  `8b1aa66c2a600b8c32ebef6d98bafb6121e940d7` is historical. The current
+  framework canonical artifact is repinned to upstream head
+  `576a766a4af5401c7f232a5f9f8460acf9e31ae6`; independent validation reports
+  the upstream 312-test, 21-file suite and workspace typecheck passing. Its
+  `generated:check` also passed in CI run
+  [35385630925](https://github.com/rpkapps/mfe-frameowrk/actions/runs/35385630925)
+  (59 checks reported, 0 failures).
 - CI run [35380935168](https://github.com/rpkapps/mfe-frameowrk/actions/runs/35380935168)
   at exact commit `adf97ab9412b50501e6cfc7781a7d6f6c30a036a` passes 208 behavior
   tests, both Gate 0 tests, all three production builds, and all 13 Chromium
   browser tests in 39s. The dual-mount scoped Tecton Dialog proof covers Escape,
   focus, and disposal. Firefox and WebKit remain untested.
+- The latest local `check` passes 210 behavior tests across 23 files, formatting,
+  lint, all workspace types, package boundaries, Tecton integrity, and build
+  policy. This local result does not substitute for the pending emitted-browser
+  trace proof; Gate 1 remains open.
+- `node scripts/build-test-apps.mjs` exits 0 for all three production builds;
+  emitted remote bundles contain no OTel or `StackContextManager` imports and
+  preserve the native `await` needed by the proof. The 14 browser checks are
+  listed but have not executed.
 
 The bounded Rsbuild proof passes for a production Discovery remote. The test creates a temporary output directory and exercises the real `mfePlugin` configuration, so it checks emitted artifacts rather than only plugin options:
 

@@ -1,6 +1,6 @@
 {
   "name": "@tecton/react",
-  "version": "0.0.0-local.8b1aa66c",
+  "version": "0.0.0-local.576a766a",
   "private": true,
   "type": "module",
   "description": "Pinned private Tecton source artifact for the MFE integration workspace.",

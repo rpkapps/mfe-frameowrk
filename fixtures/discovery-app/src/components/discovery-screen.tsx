@@ -38,6 +38,7 @@ import {
 } from '@tecton/react/tecton/page-header';
 import { useCallback, useState } from 'react';
 import { CompiledAdapterConsumer, UncompiledAdapterConsumer } from './compiler-consumers';
+import { useTraceProbe } from '../trace-probe';
 
 type Discipline = 'Subsurface' | 'Drilling' | 'Facilities';
 type Decision = {
@@ -106,6 +107,7 @@ function DecisionCard({ decision }: { decision: Decision }) {
 
 export function DiscoveryScreen({ framing = false }: { framing?: boolean }) {
   const user = useUser();
+  useTraceProbe('discovery');
   const theme = useTheme();
   const loadedUserId = useRouterState({
     select: (state) => {

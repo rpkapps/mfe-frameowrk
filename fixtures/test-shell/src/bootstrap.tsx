@@ -9,6 +9,11 @@ import { TestShell, AppFailure } from './shell';
 import './global.css';
 
 const navigation = createBrowserNavigation(window);
+if (new URLSearchParams(window.location.search).has('trace')) {
+  const { createTraceProbe } = await import('./trace-probe');
+  const traceProbe = createTraceProbe();
+  (window as Window & { __mfeTraceProbe?: typeof traceProbe }).__mfeTraceProbe = traceProbe;
+}
 const runtime = createAppRuntime({ registry, adapters: [createReactAdapter()], reportError() {} });
 const user = { id: 'test-engineer', name: 'Sarah Elliott' };
 const groups = ['test-engineers'];
@@ -93,6 +98,10 @@ function ShellApplication() {
     appId === 'discovery' &&
     location.pathname.startsWith('/discovery/project') &&
     new URLSearchParams(location.search).get('dual') === '1';
+  const traceDual =
+    location.pathname.startsWith('/discovery') &&
+    new URLSearchParams(location.search).get('dualremote') === '1' &&
+    new URLSearchParams(location.search).has('trace');
   const createNavigation = useCallback(
     () => navigation.createBoundaryHistory(`/${appId}`),
     [appId],
@@ -121,7 +130,27 @@ function ShellApplication() {
           {overrideWarnings.join(' ')}
         </div>
       )}
-      {dualDiscovery ? (
+      {traceDual ? (
+        <div data-testid="trace-dual" className="grid min-h-0 flex-1 grid-cols-2 gap-3 p-3">
+          <AppHost
+            runtime={runtime}
+            id="discovery"
+            basePath="/discovery"
+            shellState={shellState}
+            createNavigation={() => navigation.createBoundaryHistory('/discovery')}
+            className="min-h-0 w-full"
+          />
+          {/* Trace fixture keeps both real remotes under the current /discovery boundary. */}
+          <AppHost
+            runtime={runtime}
+            id="geology"
+            basePath="/discovery"
+            shellState={shellState}
+            createNavigation={() => navigation.createBoundaryHistory('/discovery')}
+            className="min-h-0 w-full"
+          />
+        </div>
+      ) : dualDiscovery ? (
         <DualDiscovery theme={theme} />
       ) : (
         <AppHost

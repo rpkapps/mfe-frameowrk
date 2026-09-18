@@ -1,7 +1,7 @@
 import * as React from "react"
+import { usePortalTarget } from "@tecton/react/tecton/portal"
 import { cva } from "class-variance-authority"
 import { cn } from "cn"
-import { usePortalTarget } from "@tecton/react/tecton/portal"
 import {
   composeRenderProps,
   Header as HeaderPrimitive,
