@@ -120,12 +120,9 @@ export function DiscoveryScreen({ framing = false }: { framing?: boolean }) {
   const [showAll, setShowAll] = useState(true);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
-  const shouldBlockNavigation = useCallback(
-    ({ next }: { readonly next: { readonly pathname: string } }) => {
-      return hasUnsavedChanges && next.pathname !== '/' && next.pathname !== '/framing';
-    },
-    [hasUnsavedChanges],
-  );
+  const shouldBlockNavigation = useCallback(() => {
+    return hasUnsavedChanges;
+  }, [hasUnsavedChanges]);
   const blocker = useBlocker({
     withResolver: true,
     shouldBlockFn: shouldBlockNavigation,
