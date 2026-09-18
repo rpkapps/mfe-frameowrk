@@ -1,0 +1,12 @@
+/*
+ * Tecton base rules that are not values of the shadcn CSS variables.
+ * Imported by globals.css (the import is kept in place by scripts/tokens-build.mts)
+ * and mirrored into registry/theme.json for registry consumers.
+ */
+@layer base {
+  /* Thin scrollbars everywhere (Firefox and Chromium 121+), tinted like dividers. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--border) transparent;
+  }
+}

@@ -1,0 +1,13 @@
+{
+  "name": "@company/fixture-test-shell",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@company/mfe-react": "workspace:*",
+    "@tecton/react": "file:../../vendor/tecton-react",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "@company/mfe-rsbuild": "workspace:*",
+    "@company/mfe-host": "workspace:*"
+  }
+}

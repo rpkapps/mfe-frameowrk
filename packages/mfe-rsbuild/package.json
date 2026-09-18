@@ -1,0 +1,29 @@
+{
+  "name": "@company/mfe-rsbuild",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.mjs"
+    },
+    "./runtime": "./src/runtime.ts"
+  },
+  "dependencies": {
+    "@babel/core": "7.29.7",
+    "@module-federation/enhanced": "2.9.0",
+    "@tailwindcss/postcss": "4.3.3",
+    "@tanstack/router-plugin": "1.168.40",
+    "babel-loader": "10.1.1",
+    "babel-plugin-react-compiler": "1.0.0",
+    "postcss": "8.5.28",
+    "postcss-loader": "8.2.1",
+    "@module-federation/rsbuild-plugin": "2.9.0",
+    "@rsbuild/plugin-babel": "2.1.0",
+    "@rsbuild/plugin-react": "2.1.0"
+  },
+  "peerDependencies": {
+    "@rsbuild/core": "2.2.8"
+  }
+}

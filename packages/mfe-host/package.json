@@ -1,0 +1,13 @@
+{
+  "name": "@company/mfe-host",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./internal": "./src/internal.ts"
+  },
+  "dependencies": {
+    "@company/mfe-core": "workspace:*"
+  }
+}

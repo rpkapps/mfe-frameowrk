@@ -1,0 +1,711 @@
+{
+  "name": "@tecton/react",
+  "version": "0.0.0-local.424889e4",
+  "private": true,
+  "type": "module",
+  "description": "Pinned private Tecton source artifact for the MFE integration workspace.",
+  "sideEffects": [
+    "**/*.css"
+  ],
+  "files": [
+    "src",
+    "styles",
+    "types",
+    "third-party",
+    "provenance.json",
+    "README.md"
+  ],
+  "dependencies": {
+    "@fontsource/figtree": "5.3.0",
+    "@fontsource/ibm-plex-mono": "5.3.0",
+    "class-variance-authority": "0.7.1",
+    "cn": "0.2.6",
+    "lucide-react": "1.45.0",
+    "react-aria": "3.52.1",
+    "react-aria-components": "1.21.1",
+    "react-resizable-panels": "4.12.4",
+    "tw-animate-css": "1.4.0"
+  },
+  "peerDependencies": {
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "tailwindcss": "4.3.3"
+  },
+  "exports": {
+    "./package.json": "./package.json",
+    "./globals.css": "./styles/globals.css",
+    "./blocks/shell-01/components/shell-command-palette.tsx": {
+      "types": "./types/blocks/shell-01/components/shell-command-palette.d.ts",
+      "default": "./src/blocks/shell-01/components/shell-command-palette.tsx"
+    },
+    "./blocks/shell-01/components/shell-header.tsx": {
+      "types": "./types/blocks/shell-01/components/shell-header.d.ts",
+      "default": "./src/blocks/shell-01/components/shell-header.tsx"
+    },
+    "./blocks/shell-01/components/shell-shortcuts-dialog.tsx": {
+      "types": "./types/blocks/shell-01/components/shell-shortcuts-dialog.d.ts",
+      "default": "./src/blocks/shell-01/components/shell-shortcuts-dialog.tsx"
+    },
+    "./blocks/shell-01/data.ts": {
+      "types": "./types/blocks/shell-01/data.d.ts",
+      "default": "./src/blocks/shell-01/data.ts"
+    },
+    "./blocks/shell-01/page.tsx": {
+      "types": "./types/blocks/shell-01/page.d.ts",
+      "default": "./src/blocks/shell-01/page.tsx"
+    },
+    "./components/avatar": {
+      "types": "./types/components/avatar.d.ts",
+      "default": "./src/components/avatar.tsx"
+    },
+    "./components/badge": {
+      "types": "./types/components/badge.d.ts",
+      "default": "./src/components/badge.tsx"
+    },
+    "./components/breadcrumb": {
+      "types": "./types/components/breadcrumb.d.ts",
+      "default": "./src/components/breadcrumb.tsx"
+    },
+    "./components/button": {
+      "types": "./types/components/button.d.ts",
+      "default": "./src/components/button.tsx"
+    },
+    "./components/card": {
+      "types": "./types/components/card.d.ts",
+      "default": "./src/components/card.tsx"
+    },
+    "./components/command": {
+      "types": "./types/components/command.d.ts",
+      "default": "./src/components/command.tsx"
+    },
+    "./components/dialog": {
+      "types": "./types/components/dialog.d.ts",
+      "default": "./src/components/dialog.tsx"
+    },
+    "./components/dropdown-menu": {
+      "types": "./types/components/dropdown-menu.d.ts",
+      "default": "./src/components/dropdown-menu.tsx"
+    },
+    "./components/empty": {
+      "types": "./types/components/empty.d.ts",
+      "default": "./src/components/empty.tsx"
+    },
+    "./components/input-group": {
+      "types": "./types/components/input-group.d.ts",
+      "default": "./src/components/input-group.tsx"
+    },
+    "./components/input": {
+      "types": "./types/components/input.d.ts",
+      "default": "./src/components/input.tsx"
+    },
+    "./components/kbd": {
+      "types": "./types/components/kbd.d.ts",
+      "default": "./src/components/kbd.tsx"
+    },
+    "./components/resizable": {
+      "types": "./types/components/resizable.d.ts",
+      "default": "./src/components/resizable.tsx"
+    },
+    "./components/separator": {
+      "types": "./types/components/separator.d.ts",
+      "default": "./src/components/separator.tsx"
+    },
+    "./components/tabs": {
+      "types": "./types/components/tabs.d.ts",
+      "default": "./src/components/tabs.tsx"
+    },
+    "./components/textarea": {
+      "types": "./types/components/textarea.d.ts",
+      "default": "./src/components/textarea.tsx"
+    },
+    "./components/toggle-group": {
+      "types": "./types/components/toggle-group.d.ts",
+      "default": "./src/components/toggle-group.tsx"
+    },
+    "./components/toggle": {
+      "types": "./types/components/toggle.d.ts",
+      "default": "./src/components/toggle.tsx"
+    },
+    "./components/tooltip": {
+      "types": "./types/components/tooltip.d.ts",
+      "default": "./src/components/tooltip.tsx"
+    },
+    "./icons/_runtime": {
+      "types": "./types/icons/_runtime.d.ts",
+      "default": "./src/icons/_runtime.ts"
+    },
+    "./icons/add-circle": {
+      "types": "./types/icons/add-circle.d.ts",
+      "default": "./src/icons/add-circle.tsx"
+    },
+    "./icons/add-pin": {
+      "types": "./types/icons/add-pin.d.ts",
+      "default": "./src/icons/add-pin.tsx"
+    },
+    "./icons/add": {
+      "types": "./types/icons/add.d.ts",
+      "default": "./src/icons/add.tsx"
+    },
+    "./icons/annotate": {
+      "types": "./types/icons/annotate.d.ts",
+      "default": "./src/icons/annotate.tsx"
+    },
+    "./icons/apps": {
+      "types": "./types/icons/apps.d.ts",
+      "default": "./src/icons/apps.tsx"
+    },
+    "./icons/arrow-down": {
+      "types": "./types/icons/arrow-down.d.ts",
+      "default": "./src/icons/arrow-down.tsx"
+    },
+    "./icons/arrow-left": {
+      "types": "./types/icons/arrow-left.d.ts",
+      "default": "./src/icons/arrow-left.tsx"
+    },
+    "./icons/arrow-right": {
+      "types": "./types/icons/arrow-right.d.ts",
+      "default": "./src/icons/arrow-right.tsx"
+    },
+    "./icons/arrow-up": {
+      "types": "./types/icons/arrow-up.d.ts",
+      "default": "./src/icons/arrow-up.tsx"
+    },
+    "./icons/cancel-circle": {
+      "types": "./types/icons/cancel-circle.d.ts",
+      "default": "./src/icons/cancel-circle.tsx"
+    },
+    "./icons/caret-collapse": {
+      "types": "./types/icons/caret-collapse.d.ts",
+      "default": "./src/icons/caret-collapse.tsx"
+    },
+    "./icons/caret-up-down": {
+      "types": "./types/icons/caret-up-down.d.ts",
+      "default": "./src/icons/caret-up-down.tsx"
+    },
+    "./icons/check-circle-open": {
+      "types": "./types/icons/check-circle-open.d.ts",
+      "default": "./src/icons/check-circle-open.tsx"
+    },
+    "./icons/check-circle": {
+      "types": "./types/icons/check-circle.d.ts",
+      "default": "./src/icons/check-circle.tsx"
+    },
+    "./icons/check": {
+      "types": "./types/icons/check.d.ts",
+      "default": "./src/icons/check.tsx"
+    },
+    "./icons/checkbox-outline-blank": {
+      "types": "./types/icons/checkbox-outline-blank.d.ts",
+      "default": "./src/icons/checkbox-outline-blank.tsx"
+    },
+    "./icons/checkbox": {
+      "types": "./types/icons/checkbox.d.ts",
+      "default": "./src/icons/checkbox.tsx"
+    },
+    "./icons/chevron-down-small": {
+      "types": "./types/icons/chevron-down-small.d.ts",
+      "default": "./src/icons/chevron-down-small.tsx"
+    },
+    "./icons/chevron-down": {
+      "types": "./types/icons/chevron-down.d.ts",
+      "default": "./src/icons/chevron-down.tsx"
+    },
+    "./icons/chevron-left-small": {
+      "types": "./types/icons/chevron-left-small.d.ts",
+      "default": "./src/icons/chevron-left-small.tsx"
+    },
+    "./icons/chevron-left": {
+      "types": "./types/icons/chevron-left.d.ts",
+      "default": "./src/icons/chevron-left.tsx"
+    },
+    "./icons/chevron-right-small": {
+      "types": "./types/icons/chevron-right-small.d.ts",
+      "default": "./src/icons/chevron-right-small.tsx"
+    },
+    "./icons/chevron-right": {
+      "types": "./types/icons/chevron-right.d.ts",
+      "default": "./src/icons/chevron-right.tsx"
+    },
+    "./icons/chevron-up-small": {
+      "types": "./types/icons/chevron-up-small.d.ts",
+      "default": "./src/icons/chevron-up-small.tsx"
+    },
+    "./icons/chevron-up": {
+      "types": "./types/icons/chevron-up.d.ts",
+      "default": "./src/icons/chevron-up.tsx"
+    },
+    "./icons/christmas-tree": {
+      "types": "./types/icons/christmas-tree.d.ts",
+      "default": "./src/icons/christmas-tree.tsx"
+    },
+    "./icons/close-small": {
+      "types": "./types/icons/close-small.d.ts",
+      "default": "./src/icons/close-small.tsx"
+    },
+    "./icons/close": {
+      "types": "./types/icons/close.d.ts",
+      "default": "./src/icons/close.tsx"
+    },
+    "./icons/co-2-leaf": {
+      "types": "./types/icons/co-2-leaf.d.ts",
+      "default": "./src/icons/co-2-leaf.tsx"
+    },
+    "./icons/code": {
+      "types": "./types/icons/code.d.ts",
+      "default": "./src/icons/code.tsx"
+    },
+    "./icons/collapse-content": {
+      "types": "./types/icons/collapse-content.d.ts",
+      "default": "./src/icons/collapse-content.tsx"
+    },
+    "./icons/controls": {
+      "types": "./types/icons/controls.d.ts",
+      "default": "./src/icons/controls.tsx"
+    },
+    "./icons/copy": {
+      "types": "./types/icons/copy.d.ts",
+      "default": "./src/icons/copy.tsx"
+    },
+    "./icons/crown": {
+      "types": "./types/icons/crown.d.ts",
+      "default": "./src/icons/crown.tsx"
+    },
+    "./icons/cube": {
+      "types": "./types/icons/cube.d.ts",
+      "default": "./src/icons/cube.tsx"
+    },
+    "./icons/database": {
+      "types": "./types/icons/database.d.ts",
+      "default": "./src/icons/database.tsx"
+    },
+    "./icons/delete": {
+      "types": "./types/icons/delete.d.ts",
+      "default": "./src/icons/delete.tsx"
+    },
+    "./icons/design": {
+      "types": "./types/icons/design.d.ts",
+      "default": "./src/icons/design.tsx"
+    },
+    "./icons/diamond-mark": {
+      "types": "./types/icons/diamond-mark.d.ts",
+      "default": "./src/icons/diamond-mark.tsx"
+    },
+    "./icons/discovery": {
+      "types": "./types/icons/discovery.d.ts",
+      "default": "./src/icons/discovery.tsx"
+    },
+    "./icons/drag-indicator": {
+      "types": "./types/icons/drag-indicator.d.ts",
+      "default": "./src/icons/drag-indicator.tsx"
+    },
+    "./icons/drill-bit": {
+      "types": "./types/icons/drill-bit.d.ts",
+      "default": "./src/icons/drill-bit.tsx"
+    },
+    "./icons/edit-square": {
+      "types": "./types/icons/edit-square.d.ts",
+      "default": "./src/icons/edit-square.tsx"
+    },
+    "./icons/electricity": {
+      "types": "./types/icons/electricity.d.ts",
+      "default": "./src/icons/electricity.tsx"
+    },
+    "./icons/engineering": {
+      "types": "./types/icons/engineering.d.ts",
+      "default": "./src/icons/engineering.tsx"
+    },
+    "./icons/error": {
+      "types": "./types/icons/error.d.ts",
+      "default": "./src/icons/error.tsx"
+    },
+    "./icons/expand-content": {
+      "types": "./types/icons/expand-content.d.ts",
+      "default": "./src/icons/expand-content.tsx"
+    },
+    "./icons/export-upload": {
+      "types": "./types/icons/export-upload.d.ts",
+      "default": "./src/icons/export-upload.tsx"
+    },
+    "./icons/facility": {
+      "types": "./types/icons/facility.d.ts",
+      "default": "./src/icons/facility.tsx"
+    },
+    "./icons/fault": {
+      "types": "./types/icons/fault.d.ts",
+      "default": "./src/icons/fault.tsx"
+    },
+    "./icons/filter": {
+      "types": "./types/icons/filter.d.ts",
+      "default": "./src/icons/filter.tsx"
+    },
+    "./icons/folder-new": {
+      "types": "./types/icons/folder-new.d.ts",
+      "default": "./src/icons/folder-new.tsx"
+    },
+    "./icons/folder-open": {
+      "types": "./types/icons/folder-open.d.ts",
+      "default": "./src/icons/folder-open.tsx"
+    },
+    "./icons/folder": {
+      "types": "./types/icons/folder.d.ts",
+      "default": "./src/icons/folder.tsx"
+    },
+    "./icons/frameworks": {
+      "types": "./types/icons/frameworks.d.ts",
+      "default": "./src/icons/frameworks.tsx"
+    },
+    "./icons/geobodies": {
+      "types": "./types/icons/geobodies.d.ts",
+      "default": "./src/icons/geobodies.tsx"
+    },
+    "./icons/geostructure": {
+      "types": "./types/icons/geostructure.d.ts",
+      "default": "./src/icons/geostructure.tsx"
+    },
+    "./icons/grid-view": {
+      "types": "./types/icons/grid-view.d.ts",
+      "default": "./src/icons/grid-view.tsx"
+    },
+    "./icons/history": {
+      "types": "./types/icons/history.d.ts",
+      "default": "./src/icons/history.tsx"
+    },
+    "./icons/home": {
+      "types": "./types/icons/home.d.ts",
+      "default": "./src/icons/home.tsx"
+    },
+    "./icons/horizon": {
+      "types": "./types/icons/horizon.d.ts",
+      "default": "./src/icons/horizon.tsx"
+    },
+    "./icons/image": {
+      "types": "./types/icons/image.d.ts",
+      "default": "./src/icons/image.tsx"
+    },
+    "./icons/indeterminate-checkbox": {
+      "types": "./types/icons/indeterminate-checkbox.d.ts",
+      "default": "./src/icons/indeterminate-checkbox.tsx"
+    },
+    "./icons": {
+      "types": "./types/icons/index.d.ts",
+      "default": "./src/icons/index.ts"
+    },
+    "./icons/info": {
+      "types": "./types/icons/info.d.ts",
+      "default": "./src/icons/info.tsx"
+    },
+    "./icons/inspect": {
+      "types": "./types/icons/inspect.d.ts",
+      "default": "./src/icons/inspect.tsx"
+    },
+    "./icons/kanban": {
+      "types": "./types/icons/kanban.d.ts",
+      "default": "./src/icons/kanban.tsx"
+    },
+    "./icons/layers": {
+      "types": "./types/icons/layers.d.ts",
+      "default": "./src/icons/layers.tsx"
+    },
+    "./icons/line-weight": {
+      "types": "./types/icons/line-weight.d.ts",
+      "default": "./src/icons/line-weight.tsx"
+    },
+    "./icons/link-off": {
+      "types": "./types/icons/link-off.d.ts",
+      "default": "./src/icons/link-off.tsx"
+    },
+    "./icons/link": {
+      "types": "./types/icons/link.d.ts",
+      "default": "./src/icons/link.tsx"
+    },
+    "./icons/list": {
+      "types": "./types/icons/list.d.ts",
+      "default": "./src/icons/list.tsx"
+    },
+    "./icons/lock-open": {
+      "types": "./types/icons/lock-open.d.ts",
+      "default": "./src/icons/lock-open.tsx"
+    },
+    "./icons/lock": {
+      "types": "./types/icons/lock.d.ts",
+      "default": "./src/icons/lock.tsx"
+    },
+    "./icons/log-curve": {
+      "types": "./types/icons/log-curve.d.ts",
+      "default": "./src/icons/log-curve.tsx"
+    },
+    "./icons/lucide-compat.map": {
+      "types": "./types/icons/lucide-compat.map.d.ts",
+      "default": "./src/icons/lucide-compat.map.ts"
+    },
+    "./icons/lucide-compat": {
+      "types": "./types/icons/lucide-compat.d.ts",
+      "default": "./src/icons/lucide-compat.ts"
+    },
+    "./icons/map": {
+      "types": "./types/icons/map.d.ts",
+      "default": "./src/icons/map.tsx"
+    },
+    "./icons/menu": {
+      "types": "./types/icons/menu.d.ts",
+      "default": "./src/icons/menu.tsx"
+    },
+    "./icons/microphone": {
+      "types": "./types/icons/microphone.d.ts",
+      "default": "./src/icons/microphone.tsx"
+    },
+    "./icons/money": {
+      "types": "./types/icons/money.d.ts",
+      "default": "./src/icons/money.tsx"
+    },
+    "./icons/more-vert": {
+      "types": "./types/icons/more-vert.d.ts",
+      "default": "./src/icons/more-vert.tsx"
+    },
+    "./icons/node": {
+      "types": "./types/icons/node.d.ts",
+      "default": "./src/icons/node.tsx"
+    },
+    "./icons/notifications": {
+      "types": "./types/icons/notifications.d.ts",
+      "default": "./src/icons/notifications.tsx"
+    },
+    "./icons/numeric": {
+      "types": "./types/icons/numeric.d.ts",
+      "default": "./src/icons/numeric.tsx"
+    },
+    "./icons/oil-rig-offshore": {
+      "types": "./types/icons/oil-rig-offshore.d.ts",
+      "default": "./src/icons/oil-rig-offshore.tsx"
+    },
+    "./icons/open-in-new": {
+      "types": "./types/icons/open-in-new.d.ts",
+      "default": "./src/icons/open-in-new.tsx"
+    },
+    "./icons/pan-tool": {
+      "types": "./types/icons/pan-tool.d.ts",
+      "default": "./src/icons/pan-tool.tsx"
+    },
+    "./icons/panel": {
+      "types": "./types/icons/panel.d.ts",
+      "default": "./src/icons/panel.tsx"
+    },
+    "./icons/person": {
+      "types": "./types/icons/person.d.ts",
+      "default": "./src/icons/person.tsx"
+    },
+    "./icons/play": {
+      "types": "./types/icons/play.d.ts",
+      "default": "./src/icons/play.tsx"
+    },
+    "./icons/preview": {
+      "types": "./types/icons/preview.d.ts",
+      "default": "./src/icons/preview.tsx"
+    },
+    "./icons/project": {
+      "types": "./types/icons/project.d.ts",
+      "default": "./src/icons/project.tsx"
+    },
+    "./icons/pulse": {
+      "types": "./types/icons/pulse.d.ts",
+      "default": "./src/icons/pulse.tsx"
+    },
+    "./icons/radio-button": {
+      "types": "./types/icons/radio-button.d.ts",
+      "default": "./src/icons/radio-button.tsx"
+    },
+    "./icons/redo": {
+      "types": "./types/icons/redo.d.ts",
+      "default": "./src/icons/redo.tsx"
+    },
+    "./icons/remove-circle": {
+      "types": "./types/icons/remove-circle.d.ts",
+      "default": "./src/icons/remove-circle.tsx"
+    },
+    "./icons/remove": {
+      "types": "./types/icons/remove.d.ts",
+      "default": "./src/icons/remove.tsx"
+    },
+    "./icons/reports-analytics": {
+      "types": "./types/icons/reports-analytics.d.ts",
+      "default": "./src/icons/reports-analytics.tsx"
+    },
+    "./icons/risk-skull": {
+      "types": "./types/icons/risk-skull.d.ts",
+      "default": "./src/icons/risk-skull.tsx"
+    },
+    "./icons/robot-2": {
+      "types": "./types/icons/robot-2.d.ts",
+      "default": "./src/icons/robot-2.tsx"
+    },
+    "./icons/rock-formations": {
+      "types": "./types/icons/rock-formations.d.ts",
+      "default": "./src/icons/rock-formations.tsx"
+    },
+    "./icons/rotate": {
+      "types": "./types/icons/rotate.d.ts",
+      "default": "./src/icons/rotate.tsx"
+    },
+    "./icons/ruler": {
+      "types": "./types/icons/ruler.d.ts",
+      "default": "./src/icons/ruler.tsx"
+    },
+    "./icons/search": {
+      "types": "./types/icons/search.d.ts",
+      "default": "./src/icons/search.tsx"
+    },
+    "./icons/seismic": {
+      "types": "./types/icons/seismic.d.ts",
+      "default": "./src/icons/seismic.tsx"
+    },
+    "./icons/select-cursor": {
+      "types": "./types/icons/select-cursor.d.ts",
+      "default": "./src/icons/select-cursor.tsx"
+    },
+    "./icons/select": {
+      "types": "./types/icons/select.d.ts",
+      "default": "./src/icons/select.tsx"
+    },
+    "./icons/settings": {
+      "types": "./types/icons/settings.d.ts",
+      "default": "./src/icons/settings.tsx"
+    },
+    "./icons/slice": {
+      "types": "./types/icons/slice.d.ts",
+      "default": "./src/icons/slice.tsx"
+    },
+    "./icons/sort-enabled": {
+      "types": "./types/icons/sort-enabled.d.ts",
+      "default": "./src/icons/sort-enabled.tsx"
+    },
+    "./icons/splitscreen": {
+      "types": "./types/icons/splitscreen.d.ts",
+      "default": "./src/icons/splitscreen.tsx"
+    },
+    "./icons/strata": {
+      "types": "./types/icons/strata.d.ts",
+      "default": "./src/icons/strata.tsx"
+    },
+    "./icons/surface": {
+      "types": "./types/icons/surface.d.ts",
+      "default": "./src/icons/surface.tsx"
+    },
+    "./icons/swap": {
+      "types": "./types/icons/swap.d.ts",
+      "default": "./src/icons/swap.tsx"
+    },
+    "./icons/target": {
+      "types": "./types/icons/target.d.ts",
+      "default": "./src/icons/target.tsx"
+    },
+    "./icons/three-d": {
+      "types": "./types/icons/three-d.d.ts",
+      "default": "./src/icons/three-d.tsx"
+    },
+    "./icons/trajectory": {
+      "types": "./types/icons/trajectory.d.ts",
+      "default": "./src/icons/trajectory.tsx"
+    },
+    "./icons/trend": {
+      "types": "./types/icons/trend.d.ts",
+      "default": "./src/icons/trend.tsx"
+    },
+    "./icons/types": {
+      "types": "./types/icons/types.d.ts",
+      "default": "./src/icons/types.ts"
+    },
+    "./icons/undo": {
+      "types": "./types/icons/undo.d.ts",
+      "default": "./src/icons/undo.tsx"
+    },
+    "./icons/valve": {
+      "types": "./types/icons/valve.d.ts",
+      "default": "./src/icons/valve.tsx"
+    },
+    "./icons/velocity-model": {
+      "types": "./types/icons/velocity-model.d.ts",
+      "default": "./src/icons/velocity-model.tsx"
+    },
+    "./icons/view-column": {
+      "types": "./types/icons/view-column.d.ts",
+      "default": "./src/icons/view-column.tsx"
+    },
+    "./icons/view-module": {
+      "types": "./types/icons/view-module.d.ts",
+      "default": "./src/icons/view-module.tsx"
+    },
+    "./icons/visibility-off": {
+      "types": "./types/icons/visibility-off.d.ts",
+      "default": "./src/icons/visibility-off.tsx"
+    },
+    "./icons/visibility": {
+      "types": "./types/icons/visibility.d.ts",
+      "default": "./src/icons/visibility.tsx"
+    },
+    "./icons/warning": {
+      "types": "./types/icons/warning.d.ts",
+      "default": "./src/icons/warning.tsx"
+    },
+    "./icons/water": {
+      "types": "./types/icons/water.d.ts",
+      "default": "./src/icons/water.tsx"
+    },
+    "./icons/well-pick": {
+      "types": "./types/icons/well-pick.d.ts",
+      "default": "./src/icons/well-pick.tsx"
+    },
+    "./icons/well-plan": {
+      "types": "./types/icons/well-plan.d.ts",
+      "default": "./src/icons/well-plan.tsx"
+    },
+    "./icons/well": {
+      "types": "./types/icons/well.d.ts",
+      "default": "./src/icons/well.tsx"
+    },
+    "./icons/window": {
+      "types": "./types/icons/window.d.ts",
+      "default": "./src/icons/window.tsx"
+    },
+    "./icons/zoom-in": {
+      "types": "./types/icons/zoom-in.d.ts",
+      "default": "./src/icons/zoom-in.tsx"
+    },
+    "./icons/zoom-out": {
+      "types": "./types/icons/zoom-out.d.ts",
+      "default": "./src/icons/zoom-out.tsx"
+    },
+    "./styles/tecton-base.css": "./src/styles/tecton-base.css",
+    "./styles/tecton-palette.css": "./src/styles/tecton-palette.css",
+    "./styles/tecton-theme.css": "./src/styles/tecton-theme.css",
+    "./styles/tecton-tokens.css": "./src/styles/tecton-tokens.css",
+    "./tecton/app-finder": {
+      "types": "./types/tecton/app-finder.d.ts",
+      "default": "./src/tecton/app-finder.tsx"
+    },
+    "./tecton/app-shell": {
+      "types": "./types/tecton/app-shell.d.ts",
+      "default": "./src/tecton/app-shell.tsx"
+    },
+    "./tecton/overflow": {
+      "types": "./types/tecton/overflow.d.ts",
+      "default": "./src/tecton/overflow.tsx"
+    },
+    "./tecton/page-header": {
+      "types": "./types/tecton/page-header.d.ts",
+      "default": "./src/tecton/page-header.tsx"
+    },
+    "./tecton/portal": {
+      "types": "./types/tecton/portal.d.ts",
+      "default": "./src/tecton/portal.tsx"
+    },
+    "./tecton/shell-actions": {
+      "types": "./types/tecton/shell-actions.d.ts",
+      "default": "./src/tecton/shell-actions.tsx"
+    },
+    "./tecton/shortcuts": {
+      "types": "./types/tecton/shortcuts.d.ts",
+      "default": "./src/tecton/shortcuts.tsx"
+    },
+    "./styles/globals.css": "./styles/globals.css"
+  }
+}

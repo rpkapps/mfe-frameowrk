@@ -1,0 +1,11 @@
+# Tecton local source artifact
+
+This private package contains the runtime import closure used by the integration shell and test Apps from [rpkapps/tecton-ui-1](https://github.com/rpkapps/tecton-ui-1), revision `424889e4ff47af48e6a8b138ad77421a5ce5014d`. It is installed through a local `file:` dependency and compiled by the consuming Rspack build. Checked-in declarations are exposed through the `types` export condition so consumers retain their own stricter TypeScript settings. It is not a published, precompiled Tecton runtime release.
+
+The snapshot includes the actual `shell-01` block, `AppFinder`, `AppShell`, `PageHeader`, their component dependencies, the icon exports, and design styles. `provenance.json` records the selected entry points and SHA-256 digest of every immutable source file. The snapshot excludes the upstream documentation application, test suite, registry tooling, and unused runtime components.
+
+After dependency installation, run `node scripts/prepare-tecton.mjs --check` from the workspace root to validate source integrity and reproduce the generated distribution stylesheet and declarations without writing. Run it without `--check` to regenerate those outputs. To restore source from a checkout at the pinned revision, run `node scripts/prepare-tecton.mjs --upstream /absolute/path/to/tecton-ui-1`. The preparation script never edits the upstream-generated files in `src/`.
+
+`@tecton/react/globals.css` exports a generated adaptation of the upstream global stylesheet. It redirects the shadcn CSS import to the exact vendored CSS-only artifact, disables implicit Tailwind scanning, and uses a package-relative source path that remains valid after installation. The shell imports it once and explicitly registers its own source files. Remote builds reference the stylesheet for tokens and generate their own scoped utilities. They do not import the global reset or fonts again.
+
+The inspected Tecton revision contains no LICENSE file and its manifest declares no license. This copy remains private. The separate `shadcn@4.21.0` stylesheet retains its MIT license under `third-party/shadcn/LICENSE.md`; its original tarball integrity and file checksums are in `provenance.json`.
