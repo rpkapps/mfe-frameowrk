@@ -2,6 +2,22 @@
 
 ## Current checkpoint — 2026-09-18
 
+## Gate 1 bounded evidence — 2026-09-18
+
+- Added a real Discovery remote navigation blocker using TanStack Router's native
+  `useBlocker({ withResolver: true })`. The remote presents MFE-owned stay/leave UI for
+  shell exits and browser Back; the Playwright cases are in
+  `tests/browser/test-shell.spec.ts`.
+- Added an in-process React proof that two mounts share one generated-style route tree while
+  retaining distinct routers, histories, contexts, and disposal in
+  `tests/tracer/contract-tracer.test.tsx` (17 tests pass in that file). This is not a browser
+  proof of concurrent federated mounts.
+- The local environment has no Playwright Chromium executable, so the new browser cases could
+  not run here; no browser pass is claimed. Browser installation was not retried.
+- Async tracing remains an unproven Gate 1 feasibility requirement. No public trace contract or
+  automatic active-span implementation was added; a supported emitted-browser probe is pending,
+  and global API patching is prohibited.
+
 ## Rsbuild surface migration — 2026-09-18
 
 The active build surface is now `@company/mfe-rsbuild`: native `mfePlugin` and `sharedReactPlugin` plugin collections compose through Rsbuild, while MF2 remains private. Rsbuild uses the Rspack engine underneath, so this changes package and configuration names without introducing a second bundler. All three production builds pass. Two Rsbuild inspection tests pass for object/function PostCSS preservation, scope-last ordering, and compiler inclusion of App, adapter, and Tecton sources. Gate 0 has two passing tests. A live launcher probe passed HTTP shell and both manifests/entries, CORS, initial SSE, subset startup, SIGTERM cleanup, and port release. Full `check` passed with 205 behavior tests (202 baseline plus one boundary and two inspection tests), formatting/lint, all five strict TypeScript programs, boundaries, Tecton integrity, and dependency-script controls; the 10-test browser suite passed in [CI run 35368770074](https://github.com/rpkapps/mfe-frameowrk/actions/runs/35368770074) at exact commit `ee2f2c95226797e72ed48c0b77cf783dfe90f3b6`. Gate 1 remains open. Earlier Rspack versions and test results remain historical evidence.

@@ -21,6 +21,58 @@ function readTheme(): 'dark' | 'light' {
   }
 }
 
+function DualDiscovery({ theme }: { readonly theme: 'dark' | 'light' }) {
+  const [firstVisible, setFirstVisible] = useState(true);
+  const firstState = useMemo(
+    () => ({ user: { id: 'first-mount', name: 'First mount' }, groups, theme }),
+    [theme],
+  );
+  const secondState = useMemo(
+    () => ({ user: { id: 'second-mount', name: 'Second mount' }, groups, theme }),
+    [theme],
+  );
+  return (
+    <div data-testid="dual-discovery" className="grid min-h-0 flex-1 gap-3 p-3 md:grid-cols-2">
+      <div data-testid="dual-first" className="flex min-h-0 min-w-0 flex-col rounded border">
+        <div className="flex items-center gap-2 border-b p-2">
+          <strong>First Discovery mount</strong>
+          {firstVisible && (
+            <button type="button" onClick={() => setFirstVisible(false)}>
+              Dispose first mount
+            </button>
+          )}
+        </div>
+        {firstVisible && (
+          <AppHost
+            runtime={runtime}
+            id="discovery"
+            basePath="/discovery"
+            shellState={firstState}
+            createNavigation={() => navigation.createBoundaryHistory('/discovery')}
+            className="min-h-0 w-full flex-1"
+          />
+        )}
+      </div>
+      <div data-testid="dual-second" className="flex min-h-0 min-w-0 flex-col rounded border">
+        <div className="flex items-center gap-2 border-b p-2">
+          <strong>Second Discovery mount</strong>
+          <button type="button" onClick={() => navigation.navigate('/discovery/')}>
+            Exit nested boundary
+          </button>
+        </div>
+        <AppHost
+          runtime={runtime}
+          id="discovery"
+          basePath="/discovery/project"
+          shellState={secondState}
+          createNavigation={() => navigation.createBoundaryHistory('/discovery/project')}
+          className="min-h-0 w-full flex-1"
+        />
+      </div>
+    </div>
+  );
+}
+
 function ShellApplication() {
   const location = useSyncExternalStore(
     (listener) => navigation.subscribe(listener),
@@ -29,6 +81,10 @@ function ShellApplication() {
   const appId = location.pathname.startsWith('/geology') ? 'geology' : 'discovery';
   const [theme, setTheme] = useState(readTheme);
   const shellState = useMemo(() => ({ user, groups, theme }), [theme]);
+  const dualDiscovery =
+    appId === 'discovery' &&
+    location.pathname.startsWith('/discovery/project') &&
+    new URLSearchParams(location.search).get('dual') === '1';
   const createNavigation = useCallback(
     () => navigation.createBoundaryHistory(`/${appId}`),
     [appId],
@@ -57,27 +113,31 @@ function ShellApplication() {
           {overrideWarnings.join(' ')}
         </div>
       )}
-      <AppHost
-        runtime={runtime}
-        id={appId}
-        basePath={`/${appId}`}
-        shellState={shellState}
-        createNavigation={createNavigation}
-        className="min-h-0 w-full flex-1"
-        renderStatus={(state, retry) =>
-          state.status === 'error' ? (
-            <AppFailure
-              name={appId === 'discovery' ? 'Discovery' : 'Geology'}
-              error={state.error.message}
-              onRetry={retry}
-            />
-          ) : state.status === 'pending' ? (
-            <div role="status" className="p-8 text-muted-foreground">
-              Loading {appId}…
-            </div>
-          ) : null
-        }
-      />
+      {dualDiscovery ? (
+        <DualDiscovery theme={theme} />
+      ) : (
+        <AppHost
+          runtime={runtime}
+          id={appId}
+          basePath={`/${appId}`}
+          shellState={shellState}
+          createNavigation={createNavigation}
+          className="min-h-0 w-full flex-1"
+          renderStatus={(state, retry) =>
+            state.status === 'error' ? (
+              <AppFailure
+                name={appId === 'discovery' ? 'Discovery' : 'Geology'}
+                error={state.error.message}
+                onRetry={retry}
+              />
+            ) : state.status === 'pending' ? (
+              <div role="status" className="p-8 text-muted-foreground">
+                Loading {appId}…
+              </div>
+            ) : null
+          }
+        />
+      )}
     </TestShell>
   );
 }

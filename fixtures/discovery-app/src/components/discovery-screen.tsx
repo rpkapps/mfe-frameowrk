@@ -1,5 +1,5 @@
 import { useTheme, useUser } from '@company/mfe-react';
-import { Link } from '@tanstack/react-router';
+import { Link, useBlocker } from '@tanstack/react-router';
 import { Badge } from '@tecton/react/components/badge';
 import { Button, buttonVariants } from '@tecton/react/components/button';
 import {
@@ -28,7 +28,8 @@ import {
   PageHeaderNav,
   PageHeaderTitle,
 } from '@tecton/react/tecton/page-header';
-import { useState } from 'react';
+import { useCallback, useState } from 'react';
+import { CompiledAdapterConsumer, UncompiledAdapterConsumer } from './compiler-consumers';
 
 type Discipline = 'Subsurface' | 'Drilling' | 'Facilities';
 type Decision = {
@@ -103,6 +104,17 @@ export function DiscoveryScreen({ framing = false }: { framing?: boolean }) {
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [selected, setSelected] = useState('1.01');
   const [showAll, setShowAll] = useState(true);
+  const shouldBlockNavigation = useCallback(
+    ({ next }: { readonly next: { readonly pathname: string } }) => {
+      const enabled = user?.id === 'test-engineer' || user?.id === 'second-mount';
+      return enabled && next.pathname !== '/' && next.pathname !== '/framing';
+    },
+    [user?.id],
+  );
+  const blocker = useBlocker({
+    withResolver: true,
+    shouldBlockFn: shouldBlockNavigation,
+  });
 
   function toggleAlternative(code: string) {
     setCollapsed((previous) => {
@@ -125,6 +137,29 @@ export function DiscoveryScreen({ framing = false }: { framing?: boolean }) {
       className="relative h-full bg-background text-sm text-foreground"
       data-testid="discovery-app"
     >
+      {blocker.status === 'blocked' && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="unsaved-navigation-title"
+          className="fixed inset-0 z-50 grid place-items-center bg-black/40 p-4"
+        >
+          <Card size="sm" className="w-full max-w-md bg-background shadow-xl">
+            <CardHeader>
+              <CardTitle>
+                <h2 id="unsaved-navigation-title">Leave Discovery?</h2>
+              </CardTitle>
+              <CardDescription>Your current review will remain open here.</CardDescription>
+            </CardHeader>
+            <CardContent className="flex justify-end gap-2">
+              <Button variant="outline" onPress={() => blocker.reset?.()}>
+                Stay here
+              </Button>
+              <Button onPress={() => blocker.proceed?.()}>Leave Discovery</Button>
+            </CardContent>
+          </Card>
+        </div>
+      )}
       <AppShellSidebar
         className={
           sidebarOpen
@@ -218,6 +253,10 @@ export function DiscoveryScreen({ framing = false }: { framing?: boolean }) {
         </div>
       </AppShellSidebar>
       <AppShellMain className="p-3 sm:p-5 lg:p-6">
+        <div className="flex gap-2" aria-label="Compiler adapter consumers">
+          <CompiledAdapterConsumer />
+          <UncompiledAdapterConsumer />
+        </div>
         <PageHeader className="mb-6">
           <Button
             className="md:hidden"

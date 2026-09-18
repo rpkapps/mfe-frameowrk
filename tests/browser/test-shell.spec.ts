@@ -140,12 +140,120 @@ test('supports deep links, native app links and browser back and forward across 
   ).toBeVisible();
 });
 
+test('keeps the remote visible while a native blocker cancels or proceeds across shell exits', async ({
+  page,
+}) => {
+  await page.addInitScript(() => {
+    const currentWindow = window as unknown as Record<string, unknown>;
+    currentWindow.__mfeNativeRefs = {
+      pushState: history.pushState,
+      replaceState: history.replaceState,
+      fetch: window.fetch,
+      addEventListener: window.addEventListener,
+      removeEventListener: window.removeEventListener,
+    };
+  });
+  await page.goto('/discovery/');
+  await page.getByRole('button', { name: /^Switch application, current:/ }).click();
+  const finder = page.getByRole('dialog', { name: 'Applications' });
+  await finder.getByPlaceholder('Search applications…').fill('Geology');
+  await finder.getByRole('menuitem', { name: /Geology/ }).click();
+  const blocker = page.getByRole('dialog', { name: 'Leave Discovery?' });
+  await expect(blocker).toBeVisible();
+  await expect(page).toHaveURL(/\/discovery\/$/);
+  await blocker.getByRole('button', { name: 'Stay here' }).click();
+  await expect(blocker).toBeHidden();
+  await expect(page.getByRole('heading', { name: 'Orion Discovery', exact: true })).toBeVisible();
+
+  await page.getByRole('button', { name: /^Switch application, current:/ }).click();
+  await page
+    .getByRole('dialog', { name: 'Applications' })
+    .getByPlaceholder('Search applications…')
+    .fill('Geology');
+  await page
+    .getByRole('dialog', { name: 'Applications' })
+    .getByRole('menuitem', { name: /Geology/ })
+    .click();
+  const historyLength = await page.evaluate(() => window.history.length);
+  await blocker.getByRole('button', { name: 'Leave Discovery' }).click();
+  await expect(page).toHaveURL(/\/geology\/$/);
+  expect(await page.evaluate(() => window.history.length)).toBe(historyLength + 1);
+  expect(
+    await page.evaluate(() => {
+      const refs = (window as unknown as { __mfeNativeRefs: Record<string, unknown> })
+        .__mfeNativeRefs;
+      return [
+        history.pushState === refs.pushState,
+        history.replaceState === refs.replaceState,
+        window.fetch === refs.fetch,
+        window.addEventListener === refs.addEventListener,
+        window.removeEventListener === refs.removeEventListener,
+      ];
+    }),
+  ).toEqual([true, true, true, true, true]);
+  await expect(
+    page.getByRole('heading', { name: 'Geologic Background', exact: true }),
+  ).toBeVisible();
+});
+
+test('keeps the remote visible when browser Back is canceled, then proceeds once', async ({
+  page,
+}) => {
+  await page.goto('/discovery/');
+  await switchApp(page, 'Geology');
+  await switchApp(page, 'Discovery');
+  await page.goBack();
+  const blocker = page.getByRole('dialog', { name: 'Leave Discovery?' });
+  await expect(blocker).toBeVisible();
+  await expect(page).toHaveURL(/\/discovery\/$/);
+  await blocker.getByRole('button', { name: 'Stay here' }).click();
+  await expect(blocker).toBeHidden();
+  await expect(page).toHaveURL(/\/discovery\/$/);
+  await page.goBack();
+  await expect(blocker).toBeVisible();
+  await blocker.getByRole('button', { name: 'Leave Discovery' }).click();
+  await expect(page).toHaveURL(/\/geology\/$/);
+  await expect(
+    page.getByRole('heading', { name: 'Geologic Background', exact: true }),
+  ).toBeVisible();
+});
+
+test('isolates two real MF2 mounts of one generated App and disposes one independently', async ({
+  page,
+}) => {
+  await page.goto('/discovery/project/?dual=1');
+  const first = page.getByTestId('dual-first');
+  const second = page.getByTestId('dual-second');
+  await expect(first.getByText('First mount', { exact: false })).toBeVisible();
+  await expect(second.getByText('Second mount', { exact: false })).toBeVisible();
+  await expect(first.getByRole('heading', { name: 'Orion Discovery', exact: true })).toBeVisible();
+  await expect(second.getByRole('heading', { name: 'Orion Discovery', exact: true })).toBeVisible();
+
+  await second.getByRole('button', { name: 'Exit nested boundary' }).click();
+  const blocker = page.getByRole('dialog', { name: 'Leave Discovery?' });
+  await expect(blocker).toBeVisible();
+  await expect(first.getByRole('dialog')).toHaveCount(0);
+  await expect(page).toHaveURL(/\/discovery\/project\/\?dual=1$/);
+  await blocker.getByRole('button', { name: 'Stay here' }).click();
+  await expect(blocker).toBeHidden();
+  await expect(second.getByText('Second mount', { exact: false })).toBeVisible();
+
+  await first.getByRole('button', { name: 'Dispose first mount' }).click();
+  await expect(first.getByRole('heading', { name: 'Orion Discovery', exact: true })).toHaveCount(0);
+  await expect(second.getByRole('heading', { name: 'Orion Discovery', exact: true })).toBeVisible();
+  await expect(second.getByText('Second mount', { exact: false })).toBeVisible();
+});
+
 test('propagates theme changes into the app and keeps the preference after reload', async ({
   page,
 }) => {
   await page.goto('/discovery/');
   const app = page.getByTestId('discovery-app');
+  const compiledConsumer = page.getByTestId('compiled-adapter-consumer');
+  const uncompiledConsumer = page.getByTestId('uncompiled-adapter-consumer');
   await expect(app).toBeVisible();
+  await expect(compiledConsumer).toHaveText(/Compiled: darktest-engineer/);
+  await expect(uncompiledConsumer).toHaveText(/Excluded: darktest-engineer/);
   await expect(page.getByTestId('discovery-session')).toHaveText('Sarah Elliott · Dark theme');
   const darkApp = await appearance(app);
   const darkHeader = await appearance(shellHeader(page));
@@ -156,6 +264,8 @@ test('propagates theme changes into the app and keeps the preference after reloa
   ).toBeVisible();
   await expect.poll(async () => (await appearance(app)).background).not.toBe(darkApp.background);
   await expect(page.getByTestId('discovery-session')).toHaveText('Sarah Elliott · Light theme');
+  await expect(compiledConsumer).toHaveText(/Compiled: lighttest-engineer/);
+  await expect(uncompiledConsumer).toHaveText(/Excluded: lighttest-engineer/);
   const lightApp = await appearance(app);
   const lightHeader = await appearance(shellHeader(page));
   expect(lightHeader.background).not.toBe(darkHeader.background);
@@ -167,6 +277,8 @@ test('propagates theme changes into the app and keeps the preference after reloa
   ).toBeVisible();
   expect(await appearance(app)).toEqual(lightApp);
   await expect(page.getByTestId('discovery-session')).toHaveText('Sarah Elliott · Light theme');
+  await expect(compiledConsumer).toHaveText(/Compiled: lighttest-engineer/);
+  await expect(uncompiledConsumer).toHaveText(/Excluded: lighttest-engineer/);
   expect(await appearance(shellHeader(page))).toEqual(lightHeader);
 
   await switchApp(page, 'Geology');
