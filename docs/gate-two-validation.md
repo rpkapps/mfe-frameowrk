@@ -67,10 +67,12 @@ for the current neutral integration and explicit migration/reset examples.
 The user authorized committing the implementation and opening PR #4. Its initial
 commit `9db1964fee7dcc684badc1500b497c5c839cba71` passed
 [CI run 35402124119](https://github.com/rpkapps/mfe-frameowrk/actions/runs/35402124119).
-The storage API conformance correction passed a fresh full local check and Terra's
-final review. Its fresh remote CI remains pending at this commit;
-the earlier run does not prove that correction. Merge, publication, and deployment
-still require explicit authorization.
+The storage API conformance correction at `7a56201` passed a fresh full local
+check, Terra's final review, and
+[CI run 35403870098](https://github.com/rpkapps/mfe-frameowrk/actions/runs/35403870098).
+The subsequent internal simplification passed a fresh full local check and Terra's
+readability/architecture review, with remote CI pending at this commit. Merge,
+publication, and deployment still require explicit authorization.
 
 ## Storage API conformance correction
 
@@ -92,3 +94,21 @@ Regression coverage checks the exact public method sets, the setter's parameter
 type, function-value rejection without callback execution, and public writes
 notifying internal subscriptions. The correction preserves all existing storage
 and lifecycle tests.
+
+The follow-up simplification gives declaration validation, public/internal handle
+construction, and write evaluation distinct methods. One shared implementation
+owns remove/clear behavior. Both public value writes and internal updater writes
+use the same guarded commit path, which captures generation ownership before any
+updater executes. No new storage state or public API was added. All 288 behavior
+tests and full static/dependency-policy checks passed; independent focused review
+passed all 24 storage/session tests.
+
+## Hook gate boundaries
+
+Gate 2 implements neutral contracts and helpers; it does not add React storage
+hooks. Gate 3 completes `useStoredState`, `useMfeStorage`, and the remaining React
+facade, including the `AppHost` contract. The existing `useUser`, `useGroups`, and
+`useTheme` hooks came from the earlier approved live-state work; Gate 3 extends
+their acceptance coverage to independent Widgets and Apps. Gate 4 adds
+`useCommand` and `useBreadcrumbs`. Tracing remains governed by its separate
+approved deferral.

@@ -123,12 +123,11 @@ class StorageEntry {
     this.physicalKey = `${owner.id}:${name}`;
   }
 
-  bind<T>(
+  private declare<T>(
     schema: StorageSchema<T>,
     options: StorageKeyOptions<T> | InternalStorageSubscriptionOptions<T>,
     allowDefault: boolean,
-    publicFacade = false,
-  ): MfeStorageKey<T> | InternalMfeStorageKey<T> {
+  ): void {
     const retention = options.retention ?? 'session';
     const version = options.version ?? DEFAULT_VERSION;
     if (!Number.isInteger(version) || version < 1) {
@@ -186,21 +185,32 @@ class StorageEntry {
     } else {
       this.declaration = next;
     }
+  }
 
+  bindInternal<T>(
+    schema: StorageSchema<T>,
+    options: StorageKeyOptions<T> | InternalStorageSubscriptionOptions<T>,
+    allowDefault: boolean,
+  ): InternalMfeStorageKey<T> {
+    this.declare(schema, options, allowDefault);
     if (this.internalHandle === undefined) {
       this.internalHandle = {
         get: () => this.readValue(),
         getSnapshot: () => this.readSnapshot(),
         subscribe: (listener) => this.subscribe(listener),
-        set: (value) => this.setValue(value),
+        set: (value) => this.setUpdater(value),
         remove: () => this.removeValue(),
       };
     }
-    if (!publicFacade) return this.internalHandle as InternalMfeStorageKey<T>;
+    return this.internalHandle as InternalMfeStorageKey<T>;
+  }
+
+  bindPublic<T>(schema: StorageSchema<T>, options: StorageKeyOptions<T>): MfeStorageKey<T> {
+    this.declare(schema, options, false);
     if (this.publicHandle === undefined) {
       this.publicHandle = {
         get: () => this.readValue(),
-        set: (value) => this.setValue(value, false),
+        set: (value) => this.setValue(value),
         remove: () => this.removeValue(),
       };
     }
@@ -255,7 +265,19 @@ class StorageEntry {
     if (changed) this.notify();
   }
 
-  setValue<T>(next: InternalStorageUpdater<T>, allowUpdater = true): void {
+  setValue<T>(next: T): void {
+    this.writeValue(() => next);
+  }
+
+  setUpdater<T>(next: InternalStorageUpdater<T>): void {
+    this.writeValue(() =>
+      typeof next === 'function'
+        ? (next as (current: T | null) => T)(this.currentValue() as T | null)
+        : next,
+    );
+  }
+
+  private writeValue(resolve: () => unknown): void {
     this.owner.assertActive();
     this.ensureCurrentStorageValue();
     const declaration = this.requireDeclaration();
@@ -266,10 +288,7 @@ class StorageEntry {
     const startGeneration = this.owner.generation;
     let candidate: unknown;
     try {
-      candidate =
-        allowUpdater && typeof next === 'function'
-          ? (next as (current: T | null) => T)(this.currentValue() as T | null)
-          : next;
+      candidate = resolve();
       candidate = this.owner.validateJsonValue(declaration.parse(candidate), 'write');
     } catch (cause) {
       throw this.owner.fail('write', 'schema validation failed', cause);
@@ -614,43 +633,23 @@ class DefinitionStorage {
   }
 
   private makeStore(store: StorageStore): MfeStorage {
+    const operations = this.storeOperations(store);
     return {
       key: <T>(name: string, schema: StorageSchema<T>, options: StorageKeyOptions<T> = {}) => {
         const entry = this.entry(store, name);
-        return entry.bind(schema, options, false, true) as MfeStorageKey<T>;
+        return entry.bindPublic(schema, options);
       },
-      remove: (name) => {
-        const entry = this.entries.get(`${store}\0${name}`);
-        if (entry !== undefined) {
-          entry.removeValue();
-          return;
-        }
-        const target = this.target(store);
-        this.runStorage('remove', () => target.removeItem(`${this.id}:${name}`));
-      },
-      clear: () => {
-        const target = this.target(store);
-        const keys: string[] = [];
-        this.runStorage('clear', () => {
-          for (let index = 0; index < target.length; index += 1) {
-            const key = target.key(index);
-            if (key?.startsWith(`${this.id}:`)) keys.push(key);
-          }
-        });
-        for (const key of keys) {
-          const name = key.slice(this.id.length + 1);
-          this.runStorage('clear', () => target.removeItem(key));
-          this.entries.get(`${store}\0${name}`)?.externalRaw(null);
-        }
-      },
+      remove: operations.remove,
+      clear: operations.clear,
     };
   }
 
   private makeInternalStore(store: StorageStore): InternalMfeStorage {
+    const operations = this.storeOperations(store);
     return {
       key: <T>(name: string, schema: StorageSchema<T>, options: StorageKeyOptions<T> = {}) => {
         const entry = this.entry(store, name);
-        return entry.bind(schema, options, false) as InternalMfeStorageKey<T>;
+        return entry.bindInternal(schema, options, false);
       },
       subscribeKey: <T>(
         name: string,
@@ -658,8 +657,15 @@ class DefinitionStorage {
         options: InternalStorageSubscriptionOptions<T>,
       ) => {
         const entry = this.entry(store, name);
-        return entry.bind(schema, options, true) as InternalMfeStorageKey<T>;
+        return entry.bindInternal(schema, options, true);
       },
+      remove: operations.remove,
+      clear: operations.clear,
+    };
+  }
+
+  private storeOperations(store: StorageStore): Pick<MfeStorage, 'remove' | 'clear'> {
+    return {
       remove: (name) => {
         const entry = this.entries.get(`${store}\0${name}`);
         if (entry !== undefined) {

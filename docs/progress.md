@@ -1,5 +1,16 @@
 # Implementation progress
 
+## Gate 2 storage simplification — 2026-09-18
+
+- Shared remove/clear logic and replaced flag-controlled handle selection with
+  explicit typed binding methods. Public values and internal updaters share one
+  guarded write path, preserving session fencing and the exact §5.13 public API.
+- Luna implemented; Terra confirmed improved readability and no blockers.
+  Fresh full local `check` passed **288 tests**, all static checks, and dependency
+  controls. Remote CI for this follow-up is pending.
+- Hooks remain gate-scoped: storage and the remaining React facade in Gate 3;
+  commands/breadcrumbs in Gate 4. Existing approved shell-state hooks stay in place.
+
 ## Gate 2 storage API correction — 2026-09-18
 
 - Restored §5.13's exact public storage types and runtime facades:
