@@ -32,7 +32,12 @@ The user explicitly requested a local shell and test MFEs after confirming no se
 - Independent review identified and fixed failed-entry retry caching, SSE CORS, competing server signal handlers, and persisted-page teardown. Shell-state provider identity is shared explicitly across federation. New app programs retain strict types and author lint rules.
 - Remote edit behavior is an explicit fast-reload fallback. Current URL and stored shell theme survive; component-local app state does not.
 
-Validation is in progress. This environment cannot download Chromium because its network policy rejects the browser CDN; actual browser execution is assigned to CI, with no browser pass claimed yet.
+Validation is complete for the requested test environment:
+
+- Full `check` passed: formatting, lint, five strict TypeScript programs, import boundaries, Tecton source/declaration integrity, **187 behavior tests**, and dependency-script controls. Both Gate 0 conformance tests remain green.
+- All three production builds pass with compiler diagnostics enabled. A real launcher probe served the shell and both manifests, received a correctly allowed cross-origin rebuild event, and shut down all servers/compilers with exit code 0 on Ctrl+C.
+- [CI run 35307532089](https://github.com/rpkapps/mfe-frameowrk/actions/runs/35307532089) passed the complete pipeline and **all 9 Chromium browser tests**: persistent header/scoped app content, real remote loading, deep links/back-forward, live theme/user hooks, keyboard navigation, two mobile layouts, recovery from a failed remote entry, URL overrides, and a real route edit/reload preserving URL/theme. Desktop/mobile screenshots are retained in its browser-results artifact.
+- Independent review's P1/P2 findings are closed. Local browser installation was blocked by this environment's network policy; the browser results above came from actual CI Chromium execution, not a DOM substitute.
 
 ## Remaining gate evidence
 
