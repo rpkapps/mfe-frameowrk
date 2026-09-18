@@ -4,10 +4,8 @@ Updated 2026-09-18 for continuation in another session.
 
 ## Current repository state
 
-- Local checkout: branch `feat/gate1-close`, HEAD `54d375e9606ac605fb37c7c25f43f9f30df59376`.
 - Remote continuation point: PR [#2](https://github.com/rpkapps/mfe-frameowrk/pull/2) is merged. Start from remote `main` at `ae00da00d596b442b357b5b112edc98d052cee68` (reviewed tree `839d9a2`) after verifying the live repository state.
 - The last verified CI for the post-removal tree was [run 35391704355](https://github.com/rpkapps/mfe-frameowrk/actions/runs/35391704355): 208 behavior tests, both Gate 0 tests, three production builds, and 13 Chromium checks passed in CI. The post-removal local checkout did not rerun Chromium; no current tracing implementation is claimed.
-- This handoff is an uncommitted local deliverable to attach or carry forward. Merge, publish, and deployment still require explicit authorization.
 
 The full supplied specification is tracked verbatim at [`mfe-framework-spec.md`](./mfe-framework-spec.md).
 The tracked [approved revisions](./approved-contract-revisions.md) remain authoritative amendments;
