@@ -195,7 +195,9 @@ test('searches apps with the command keyboard shortcut and exposes shortcut help
     page.getByRole('heading', { name: 'Geologic Background', exact: true }),
   ).toBeVisible();
 
-  await page.keyboard.press('Shift+/');
+  // A literal '/' alias stays '/' even with Shift in Playwright. The physical
+  // Slash key produces the '?' symbol used by the real keyboard shortcut.
+  await page.keyboard.press('Shift+Slash');
   const help = page.getByRole('dialog', { name: 'Keyboard shortcuts' });
   await expect(help).toBeVisible();
   await expect(help.getByText('Open geological map', { exact: true })).toBeVisible();
