@@ -20,7 +20,16 @@ const test = browserTest.extend<{ browserErrors: string[] }>({
 
 const shellHeader = (page: Page) => page.getByRole('banner', { name: 'Application shell' });
 
-async function switchApp(page: Page, name: 'Discovery' | 'Geology') {
+async function armUnsavedChanges(scope: Page | Locator) {
+  await scope.getByRole('button', { name: 'Make review unsaved', exact: true }).click();
+  await expect(scope.getByTestId('unsaved-change-state')).toHaveText('Unsaved review changes');
+}
+
+async function switchApp(
+  page: Page,
+  name: 'Discovery' | 'Geology',
+  options: { arm?: boolean } = {},
+) {
   await page.getByRole('button', { name: /^Switch application, current:/ }).click();
   const finder = page.getByRole('dialog', { name: 'Applications' });
   await finder.getByPlaceholder('Search applications…').fill(name);
@@ -33,6 +42,7 @@ async function switchApp(page: Page, name: 'Discovery' | 'Geology') {
       exact: true,
     }),
   ).toBeVisible();
+  if (options.arm) await armUnsavedChanges(page);
 }
 
 async function appearance(element: Locator) {
@@ -145,6 +155,8 @@ test('keeps the remote visible while a native blocker cancels or proceeds across
 }) => {
   await page.addInitScript(() => {
     const currentWindow = window as unknown as Record<string, unknown>;
+    // Keep the exact native references for the no-global-patching assertion below.
+    /* eslint-disable @typescript-eslint/unbound-method -- preserve exact native methods for identity checks */
     currentWindow.__mfeNativeRefs = {
       pushState: history.pushState,
       replaceState: history.replaceState,
@@ -152,8 +164,10 @@ test('keeps the remote visible while a native blocker cancels or proceeds across
       addEventListener: window.addEventListener,
       removeEventListener: window.removeEventListener,
     };
+    /* eslint-enable @typescript-eslint/unbound-method -- end native identity snapshot */
   });
   await page.goto('/discovery/');
+  await armUnsavedChanges(page);
   await page.getByRole('button', { name: /^Switch application, current:/ }).click();
   const finder = page.getByRole('dialog', { name: 'Applications' });
   await finder.getByPlaceholder('Search applications…').fill('Geology');
@@ -201,7 +215,7 @@ test('keeps the remote visible when browser Back is canceled, then proceeds once
 }) => {
   await page.goto('/discovery/');
   await switchApp(page, 'Geology');
-  await switchApp(page, 'Discovery');
+  await switchApp(page, 'Discovery', { arm: true });
   await page.goBack();
   const blocker = page.getByRole('dialog', { name: 'Leave Discovery?' });
   await expect(blocker).toBeVisible();
@@ -228,12 +242,26 @@ test('isolates two real MF2 mounts of one generated App and disposes one indepen
   await expect(second.getByText('Second mount', { exact: false })).toBeVisible();
   await expect(first.getByRole('heading', { name: 'Orion Discovery', exact: true })).toBeVisible();
   await expect(second.getByRole('heading', { name: 'Orion Discovery', exact: true })).toBeVisible();
+  await expect(first.getByTestId('discovery-session')).toHaveText(/First mount/);
+  await expect(second.getByTestId('discovery-session')).toHaveText(/Second mount/);
+  await expect(first.getByTestId('discovery-loader-context')).toHaveText('Loaded for first-mount');
+  await expect(second.getByTestId('discovery-loader-context')).toHaveText(
+    'Loaded for second-mount',
+  );
+
+  await second.getByRole('link', { name: 'Framing', exact: true }).click();
+  await expect(page).toHaveURL(/\/discovery\/project\/framing\?dual=1$/);
+  await expect(first.getByTestId('discovery-loader-context')).toHaveText('Loaded for first-mount');
+  await expect(second.getByTestId('discovery-loader-context')).toHaveText(
+    'Loaded for second-mount',
+  );
+  await armUnsavedChanges(second);
 
   await second.getByRole('button', { name: 'Exit nested boundary' }).click();
-  const blocker = page.getByRole('dialog', { name: 'Leave Discovery?' });
+  const blocker = second.getByRole('dialog', { name: 'Leave Discovery?' });
   await expect(blocker).toBeVisible();
   await expect(first.getByRole('dialog')).toHaveCount(0);
-  await expect(page).toHaveURL(/\/discovery\/project\/\?dual=1$/);
+  await expect(page).toHaveURL(/\/discovery\/project\/framing\?dual=1$/);
   await blocker.getByRole('button', { name: 'Stay here' }).click();
   await expect(blocker).toBeHidden();
   await expect(second.getByText('Second mount', { exact: false })).toBeVisible();
@@ -242,6 +270,14 @@ test('isolates two real MF2 mounts of one generated App and disposes one indepen
   await expect(first.getByRole('heading', { name: 'Orion Discovery', exact: true })).toHaveCount(0);
   await expect(second.getByRole('heading', { name: 'Orion Discovery', exact: true })).toBeVisible();
   await expect(second.getByText('Second mount', { exact: false })).toBeVisible();
+  await expect(second.getByTestId('discovery-loader-context')).toHaveText(
+    'Loaded for second-mount',
+  );
+  await second.getByRole('link', { name: 'Overview', exact: true }).click();
+  await expect(page).toHaveURL(/\/discovery\/project\/\?dual=1$/);
+  await expect(second.getByTestId('discovery-loader-context')).toHaveText(
+    'Loaded for second-mount',
+  );
 });
 
 test('propagates theme changes into the app and keeps the preference after reload', async ({

@@ -14,9 +14,30 @@
   proof of concurrent federated mounts.
 - The local environment has no Playwright Chromium executable, so the new browser cases could
   not run here; no browser pass is claimed. Browser installation was not retried.
-- Async tracing remains an unproven Gate 1 feasibility requirement. No public trace contract or
-  automatic active-span implementation was added; a supported emitted-browser probe is pending,
-  and global API patching is prohibited.
+- Async tracing remains an unproven Gate 1 feasibility requirement. The reviewed
+  `@opentelemetry/api` 1.9.1 / `@opentelemetry/context-zone-peer-dep` 2.11.0 /
+  `zone.js` 0.16.0 probe lost parentage after `await` under the repository's ES2022
+  output; no dependency was added to the repository. The feasibility record proposes,
+  pending explicit approval, operation-bound propagation through framework-managed
+  route/Query/request boundaries with explicit service parameters for non-React
+  utilities. Automatic parentage for arbitrary native `await` remains unpromised under
+  that proposal. The alternative is a shell async-context runtime plus async
+  downleveling, with its bundle, patching, target, and emitted-browser proofs recorded.
+  Gate 1 remains open and no public trace contract or implementation was added.
+
+## Trace feasibility decision proposal — 2026-09-18
+
+The reviewed Zone-based candidate did not preserve active parentage through awaited
+continuations in the ES2022 runtime probe. This narrows the evidence for that candidate
+without claiming that all browser mechanisms are exhausted. Gate 1 §5.16.3 and Gate 1
+item 11 still require an explicit decision: approve operation-bound context propagation
+through framework-managed route/Query/request boundaries, with explicit telemetry-service
+parameters for non-React utilities, or approve a shell async-context runtime plus async
+downleveling and its required emitted-browser proofs. The proposed operation-bound
+contract keeps OTel-style `startSpan`/`startActiveSpan` and manual `end()` semantics and
+does not promise automatic parentage across arbitrary native `await`. No new public
+`run`/`withContext`/`trace` API is proposed blindly. This is a proposal only; Gate 1
+remains open pending approval and proof.
 
 ## Rsbuild surface migration — 2026-09-18
 

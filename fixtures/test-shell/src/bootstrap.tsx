@@ -56,7 +56,14 @@ function DualDiscovery({ theme }: { readonly theme: 'dark' | 'light' }) {
       <div data-testid="dual-second" className="flex min-h-0 min-w-0 flex-col rounded border">
         <div className="flex items-center gap-2 border-b p-2">
           <strong>Second Discovery mount</strong>
-          <button type="button" onClick={() => navigation.navigate('/discovery/')}>
+          <button
+            type="button"
+            onClick={() => {
+              navigation
+                .navigate('/discovery/')
+                .catch((cause: unknown) => window.reportError(cause));
+            }}
+          >
             Exit nested boundary
           </button>
         </div>

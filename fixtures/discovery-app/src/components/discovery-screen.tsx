@@ -1,5 +1,5 @@
 import { useTheme, useUser } from '@company/mfe-react';
-import { Link, useBlocker } from '@tanstack/react-router';
+import { Link, useBlocker, useRouterState } from '@tanstack/react-router';
 import { Badge } from '@tecton/react/components/badge';
 import { Button, buttonVariants } from '@tecton/react/components/button';
 import {
@@ -99,17 +99,23 @@ function DecisionCard({ decision }: { decision: Decision }) {
 export function DiscoveryScreen({ framing = false }: { framing?: boolean }) {
   const user = useUser();
   const theme = useTheme();
+  const loadedUserId = useRouterState({
+    select: (state) => {
+      const loaderData = state.matches[state.matches.length - 1]?.loaderData;
+      return (loaderData as { loadedUserId?: string } | undefined)?.loadedUserId;
+    },
+  });
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [view, setView] = useState<'list' | 'graph'>('list');
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [selected, setSelected] = useState('1.01');
   const [showAll, setShowAll] = useState(true);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const shouldBlockNavigation = useCallback(
     ({ next }: { readonly next: { readonly pathname: string } }) => {
-      const enabled = user?.id === 'test-engineer' || user?.id === 'second-mount';
-      return enabled && next.pathname !== '/' && next.pathname !== '/framing';
+      return hasUnsavedChanges && next.pathname !== '/' && next.pathname !== '/framing';
     },
-    [user?.id],
+    [hasUnsavedChanges],
   );
   const blocker = useBlocker({
     withResolver: true,
@@ -137,6 +143,19 @@ export function DiscoveryScreen({ framing = false }: { framing?: boolean }) {
       className="relative h-full bg-background text-sm text-foreground"
       data-testid="discovery-app"
     >
+      <div className="mb-3 flex items-center gap-2" data-testid="unsaved-change-control">
+        <Button
+          variant={hasUnsavedChanges ? 'secondary' : 'outline'}
+          aria-pressed={hasUnsavedChanges}
+          onPress={() => setHasUnsavedChanges((value) => !value)}
+        >
+          {hasUnsavedChanges ? 'Mark review saved' : 'Make review unsaved'}
+        </Button>
+        <span role="status" data-testid="unsaved-change-state">
+          {hasUnsavedChanges ? 'Unsaved review changes' : 'Review saved'}
+        </span>
+        <span data-testid="discovery-loader-context">Loaded for {loadedUserId ?? 'pending'}</span>
+      </div>
       {blocker.status === 'blocked' && (
         <div
           role="dialog"
