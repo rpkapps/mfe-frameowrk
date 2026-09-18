@@ -22,6 +22,7 @@ describe('federated transport', () => {
       .mockResolvedValue({ default: definition });
     const { registry } = createRemoteRegistry({ apps });
     const registration = registry[0]!;
+    expect(registration).toMatchObject({ id: 'example', kind: 'app', contractMajor: 1 });
     await expect(registration.load({ signal: signal(), retry: false })).rejects.toThrow('offline');
     expect(registerRemotes).toHaveBeenCalledTimes(1);
     await expect(registration.load({ signal: signal(), retry: true })).resolves.toBe(definition);

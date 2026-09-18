@@ -9,6 +9,16 @@ async function lint(preset, code, filePath = 'src/example.js') {
 }
 
 describe('composable flat presets', () => {
+  it('enforces raw-storage prevention only in the author preset', async () => {
+    const source = 'localStorage.getItem("key");';
+    expect(await lint('author', source)).toContainEqual(
+      expect.objectContaining({ ruleId: 'mfe/no-raw-storage', severity: 2 }),
+    );
+    expect(await lint('framework', source)).not.toContainEqual(
+      expect.objectContaining({ ruleId: 'mfe/no-raw-storage' }),
+    );
+  });
+
   it('enforces global patch prevention in both presets', async () => {
     for (const preset of ['framework', 'author']) {
       const messages = await lint(preset, 'window.fetch = () => Promise.resolve(new Response());');

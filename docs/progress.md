@@ -1,5 +1,49 @@
 # Implementation progress
 
+## Gate 2 storage simplification — 2026-09-18
+
+- Shared remove/clear logic and replaced flag-controlled handle selection with
+  explicit typed binding methods. Public values and internal updaters share one
+  guarded write path, preserving session fencing and the exact §5.13 public API.
+- Luna implemented; Terra confirmed improved readability and no blockers.
+  Fresh full local `check` passed **288 tests**, all static checks, and dependency
+  controls. Remote CI for this follow-up is pending.
+- Hooks remain gate-scoped: storage and the remaining React facade in Gate 3;
+  commands/breadcrumbs in Gate 4. Existing approved shell-state hooks stay in place.
+
+## Gate 2 storage API correction — 2026-09-18
+
+- Restored §5.13's exact public storage types and runtime facades:
+  `key/remove/clear` and `get/set(value)/remove`. Subscription machinery and
+  functional updates now live behind the host internal entry, sharing one store
+  with the imperative facade.
+- Added public API shape/type checks, callback nonexecution, and shared-notification
+  regression coverage. Fresh full local `check` passed **288 tests** and all static
+  and dependency-policy checks. Luna implemented; Terra's final review has no blockers.
+- Initial PR #4 commit `9db1964` passed CI. Fresh CI for this correction is pending.
+  The pre-existing `AppHost` prop/facade differences remain explicit Gate 3 work;
+  tracing remains deferred.
+
+## Gate 2 local implementation — 2026-09-18
+
+- Continued from verified remote `main` at `9bfdce2f296928c3034b30e7e84029938471703b`,
+  which includes the full specification added by merged PR #3.
+- Added neutral App/Widget contracts, input/event validation, normalized registry
+  records, duplicate diagnostics, explicit malformed-entry quarantine, and
+  table-driven selection. Both existing tracer paths consume core/host contracts.
+- Added definition-owned storage, explicit schema migration and reset, session
+  retention, group/identity transition fixtures, and bounded load/mount/disposal.
+  Shared transport loads retain independent waiter cancellation and deadlines.
+- Kept core/host free of UI, Router and MF2 imports. Tracing remains deferred;
+  Gate 3 author facades and later integrations have not started.
+- Validation and review are recorded in [Gate 2 validation](gate-two-validation.md).
+  Full local `check` passed **286 behavior tests**, static checks and dependency
+  controls; both Gate 0 tests and all three production builds passed. Terra's
+  architecture/readability review has no outstanding concrete findings.
+  Current storage integration and migration/reset examples are in
+  [the storage contract](storage-contracts.md). Fresh Chromium evidence remains
+  pending; base-commit CI is not evidence for this uncommitted change.
+
 ## Gate 1 bounded evidence — tracing deferred — 2026-09-18
 
 - Replaced the custom modal path with native Tecton `Dialog`, `Button`, and

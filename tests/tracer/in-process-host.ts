@@ -1,7 +1,7 @@
 import { createMemoryHistory } from '@tanstack/history';
 import type { AnyRouter } from '@tanstack/react-router';
-import type { MfeError } from '@company/mfe-core';
-import type { AppDefinition, MfeRouterContext } from '@company/mfe-react';
+import type { MfeError, ShellState } from '@company/mfe-core';
+import type { AppDefinition } from '@company/mfe-react';
 import { createAppMount } from '@company/mfe-react/internal';
 
 interface TracerOptions {
@@ -10,13 +10,15 @@ interface TracerOptions {
   readonly basePath: string;
   readonly target: HTMLElement;
   readonly reportError: (error: MfeError) => void;
-  readonly shellState?: Pick<MfeRouterContext['mfe'], 'user' | 'groups' | 'theme'>;
+  readonly shellState?: ShellState;
 }
 
 /** The in-process loader and memory boundary are test-internal (§16 Gate 0). */
 export function createTracerMount(options: TracerOptions) {
   const definition = options.definitions.get(options.id);
   if (!definition) throw new Error(`No in-process fixture definition for ${options.id}.`);
+  // createAppMount enters the same host AppRegistration normalization path as production;
+  // the helper supplies no adapter or loader bypass.
   return createAppMount({
     definition,
     basePath: options.basePath,

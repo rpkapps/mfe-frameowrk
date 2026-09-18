@@ -1,10 +1,11 @@
 import { loadRemote, registerRemotes } from '@module-federation/enhanced/runtime';
+import type { AppRegistration } from '@company/mfe-host';
+import { MFE_CONTRACT_MAJOR } from '@company/mfe-core';
 
-export interface RemoteApp {
-  readonly id: string;
-  readonly adapter: string;
+export type RemoteApp = Pick<AppRegistration, 'id' | 'adapter'> & {
   readonly entry: string;
-}
+  readonly version?: string;
+};
 
 export interface RemoteLocation {
   readonly name: string;
@@ -16,11 +17,7 @@ export interface RemoteLoadOptions {
   readonly retry: boolean;
 }
 
-export interface RemoteRegistration {
-  readonly id: string;
-  readonly adapter: string;
-  readonly load: (options: RemoteLoadOptions) => Promise<unknown>;
-}
+export type RemoteRegistration = AppRegistration;
 
 function entryUrl(value: unknown): string {
   if (typeof value !== 'string') throw new Error('Expected a URL string.');
@@ -91,6 +88,9 @@ export function createRemoteRegistry(options: {
     let failed = false;
     return {
       id: app.id,
+      kind: 'app',
+      contractMajor: MFE_CONTRACT_MAJOR,
+      ...(app.version === undefined ? {} : { version: app.version }),
       adapter: app.adapter,
       async load({ signal, retry }) {
         signal.throwIfAborted();

@@ -2,6 +2,7 @@ import { RuleTester } from 'eslint';
 import { describe, it } from 'vitest';
 import tseslint from 'typescript-eslint';
 import noGlobalPatching from '../src/rules/no-global-patching.js';
+import noRawStorage from '../src/rules/no-raw-storage.js';
 import stableDefinitions from '../src/rules/stable-definitions.js';
 
 RuleTester.describe = describe;
@@ -94,4 +95,32 @@ tester.run('stable-definitions', stableDefinitions, {
     'import { createApp } from "@company/mfe-react"; function View() { return createApp!({ id: "tracer" }); }',
     'import { createApp } from "@company/mfe-react"; function View() { return useMemo(() => createApp({ id: "tracer" }), []); }',
   ].map((code) => ({ code, errors: [{ messageId: 'unstable' }] })),
+});
+
+tester.run('no-raw-storage', noRawStorage, {
+  valid: [
+    'function read(localStorage) { return localStorage.getItem("key"); }',
+    'function read(sessionStorage) { return sessionStorage.getItem("key"); }',
+    'function read(window) { return window.localStorage.getItem("key"); }',
+    'const localStorage = ownedStorage; localStorage.getItem("key");',
+    'const window = { localStorage: ownedStorage }; window.localStorage.getItem("key");',
+    'const own = { localStorage: ownedStorage }; const { localStorage } = own; localStorage.getItem("key");',
+    'type StorageType = typeof localStorage; type NestedStorageType = typeof window.localStorage;',
+    'import { localStorage } from "storage-library"; localStorage.getItem("key");',
+    'const other = { localStorage: ownedStorage }; other["localStorage"].getItem("key");',
+  ],
+  invalid: [
+    'localStorage.getItem("key");',
+    'const value = { localStorage };',
+    'sessionStorage.setItem("key", "value");',
+    'window.localStorage.removeItem("key");',
+    'globalThis["sessionStorage"].clear();',
+    'const browser = window; browser.localStorage.getItem("key");',
+    'window.window.localStorage.getItem("key");',
+    'const storage = localStorage; storage.getItem("key");',
+    'const { localStorage: storage } = window; storage.getItem("key");',
+    'const { sessionStorage } = globalThis; sessionStorage.getItem("key");',
+    'const { getItem } = localStorage; getItem("key");',
+    '({ localStorage: storage } = window); storage.getItem("key");',
+  ].map((code) => ({ code, errors: [{ messageId: 'storage' }] })),
 });

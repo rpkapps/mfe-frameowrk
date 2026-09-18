@@ -6,6 +6,7 @@ import { Component } from 'react';
 import type { PropsWithChildren } from 'react';
 import { flushSync } from 'react-dom';
 import { createRoot } from 'react-dom/client';
+import { MFE_CONTRACT_MAJOR } from '@company/mfe-core';
 import type { MfeError, ShellState } from '@company/mfe-core';
 import { createAppRuntime, untilAttemptRetires } from '@company/mfe-host';
 import type { AppAdapterOptions, AppDriver, MountAttempt } from '@company/mfe-host';
@@ -293,6 +294,8 @@ export function createAppMount(options: AppMountOptions) {
     registry: [
       {
         id: options.definition.id,
+        kind: 'app',
+        contractMajor: MFE_CONTRACT_MAJOR,
         adapter: 'react',
         load: () => Promise.resolve(options.definition),
       },

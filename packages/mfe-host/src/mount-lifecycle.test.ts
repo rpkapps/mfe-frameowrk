@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { createMfeError } from '@company/mfe-core';
 import type { MountState } from '@company/mfe-core';
-import { createMountLifecycle } from './mount-lifecycle';
+import {
+  createMountLifecycle,
+  MAX_MOUNT_DEADLINE_MS,
+  resolveMountDeadlines,
+} from './mount-lifecycle';
 import type { MountAttempt } from './mount-lifecycle';
 
 const definition = { kind: 'app', id: 'operations', version: '2.1.0' } as const;
@@ -17,6 +21,173 @@ function deferred() {
 }
 
 describe('mount lifecycle ownership', () => {
+  it('rejects non-finite and platform-overflowing deadlines before starting work', () => {
+    expect(() => resolveMountDeadlines({ loadMs: Number.POSITIVE_INFINITY })).toThrow(
+      /finite number/,
+    );
+    expect(() => resolveMountDeadlines({ mountMs: MAX_MOUNT_DEADLINE_MS + 1 })).toThrow(
+      /finite number/,
+    );
+    expect(() =>
+      createMountLifecycle({
+        definition,
+        deadlines: { disposeMs: -1 },
+        mount: vi.fn(),
+        reportError: vi.fn(),
+      }),
+    ).toThrow(/finite number/);
+  });
+
+  it('clears phase and disposal timers on success and failure paths', async () => {
+    vi.useFakeTimers();
+    try {
+      const successful = createMountLifecycle({
+        definition,
+        deadlines: { loadMs: 10, mountMs: 10, disposeMs: 10 },
+        load: vi.fn(),
+        mount: vi.fn(),
+        reportError: vi.fn(),
+      });
+      await successful.start();
+      expect(vi.getTimerCount()).toBe(0);
+      await successful.handle.dispose();
+      expect(vi.getTimerCount()).toBe(0);
+
+      const failed = createMountLifecycle({
+        definition,
+        deadlines: { loadMs: 10, mountMs: 10, disposeMs: 10 },
+        mount: () => {
+          throw new Error('mount failed');
+        },
+        reportError: vi.fn(),
+      });
+      await expect(failed.start()).rejects.toMatchObject({ code: 'mount/failure' });
+      expect(vi.getTimerCount()).toBe(0);
+      await failed.handle.dispose();
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('bounds loading with a structured timeout and fences its late result', async () => {
+    vi.useFakeTimers();
+    try {
+      const late = deferred();
+      const attached = vi.fn();
+      const runtime = createMountLifecycle({
+        definition,
+        deadlines: { loadMs: 10, mountMs: 10, disposeMs: 10 },
+        load: () => late.promise,
+        mount: (attempt) => {
+          attempt.commit(attached);
+        },
+        reportError: vi.fn(),
+      });
+      const started = runtime.start();
+      await vi.advanceTimersByTimeAsync(10);
+      await expect(started).rejects.toMatchObject({
+        code: 'load/timeout',
+        id: definition.id,
+      });
+      expect(runtime.handle.state.status).toBe('error');
+      expect(vi.getTimerCount()).toBe(0);
+      late.resolve();
+      await Promise.resolve();
+      expect(attached).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('bounds the actual mount separately and fences a late mount commit', async () => {
+    vi.useFakeTimers();
+    try {
+      const late = deferred();
+      const attached = vi.fn();
+      const entered = deferred();
+      const runtime = createMountLifecycle({
+        definition,
+        deadlines: { loadMs: 10, mountMs: 10, disposeMs: 10 },
+        load: () => undefined,
+        mount: async (attempt) => {
+          entered.resolve();
+          await late.promise;
+          attempt.commit(attached);
+        },
+        reportError: vi.fn(),
+      });
+      const started = runtime.start();
+      await entered.promise;
+      await vi.advanceTimersByTimeAsync(10);
+      await expect(started).rejects.toMatchObject({ code: 'mount/timeout' });
+      expect(vi.getTimerCount()).toBe(0);
+      late.resolve();
+      await Promise.resolve();
+      expect(attached).not.toHaveBeenCalled();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('rejects disposal at its deadline while observing eventual cleanup', async () => {
+    vi.useFakeTimers();
+    try {
+      const late = deferred();
+      const cleanup = vi.fn(() => late.promise);
+      const runtime = createMountLifecycle({
+        definition,
+        deadlines: { loadMs: 10, mountMs: 10, disposeMs: 10 },
+        mount: (attempt) => {
+          attempt.onCleanup(cleanup);
+        },
+        reportError: vi.fn(),
+      });
+      await runtime.start();
+      const disposed = runtime.handle.dispose();
+      expect(runtime.handle.state).toEqual({ status: 'disposed' });
+      const rejection = expect(disposed).rejects.toMatchObject({ code: 'dispose/timeout' });
+      await vi.advanceTimersByTimeAsync(10);
+      await rejection;
+      expect(vi.getTimerCount()).toBe(0);
+      late.resolve();
+      await Promise.resolve();
+      expect(cleanup).toHaveBeenCalledOnce();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('does not let stale cleanup hold a retry pending forever', async () => {
+    vi.useFakeTimers();
+    try {
+      const late = deferred();
+      const mount = vi.fn((attempt: MountAttempt) => {
+        if (attempt.number === 1) {
+          attempt.onCleanup(() => late.promise);
+          throw new Error('first attempt failed');
+        }
+      });
+      const runtime = createMountLifecycle({
+        definition,
+        deadlines: { loadMs: 10, mountMs: 10, disposeMs: 10 },
+        mount,
+        reportError: vi.fn(),
+      });
+      await expect(runtime.start()).rejects.toMatchObject({ code: 'mount/failure' });
+      const retried = runtime.handle.retry();
+      await vi.advanceTimersByTimeAsync(10);
+      await expect(retried).rejects.toMatchObject({ code: 'mount/timeout' });
+      expect(mount).toHaveBeenCalledTimes(1);
+      late.resolve();
+      await Promise.resolve();
+      await Promise.resolve();
+      expect(mount).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it('starts once, caches snapshots and avoids notifications for unchanged mounted state', async () => {
     const mount = vi.fn();
     const runtime = createMountLifecycle({ definition, mount, reportError: vi.fn() });
