@@ -2,7 +2,7 @@
 
 The pinned Query integration uses two mechanisms together: context carries a
 stable service object, and Query hooks subscribe to data owned by that object.
-This provides a model for the proposed shell-state integration, but does not make
+This provides the model for the approved shell-state integration, but does not make
 plain native route-context snapshots reactive.
 
 ## Verified against the installed versions
@@ -52,10 +52,11 @@ The pinned source makes the distinction explicit:
 
 ## Implication for the framework
 
-The recommended architecture uses one shell-state source with two access paths:
+The approved architecture uses one shell-state source with two access paths:
 
 1. Native router context supplies stable services and an immutable shell snapshot
-   to route callbacks. New route invocations receive the current snapshot.
+   to route callbacks. A newly started native load receives the current snapshot;
+   callbacks in an already-started load retain that load's snapshot.
 2. Existing `useUser`, `useGroups`, and `useTheme` hooks subscribe directly to the
    appropriate fields for live UI updates, including independent Widgets.
 3. Identity/tenant/permission changes coordinate obsolete-work cancellation, Query
@@ -66,7 +67,7 @@ framework state remains in purpose-specific plain TypeScript structures, observe
 with `useSyncExternalStore`. Query continues to own server data. No new public
 generic store or context-selector concept is required.
 
-The original promise that plain `useRouteContext({ select: c => c.mfe.theme })`
-automatically receives theme updates without loader work still needs an explicit
-contract revision or a separately proven supported mechanism. These tests do not
-waive that promise, resolve the history/bootstrap mismatch, or pass Gate 0.
+The user approved replacing the original automatic `useRouteContext` reactivity
+promise with this model. [The revision](approved-contract-revisions.md) records
+the exact contract; [adapter validation](gate-zero-validation.md) records its
+implementation and limits. These isolated Query probes alone do not pass Gate 0.

@@ -21,7 +21,7 @@ export function createProbeContext(theme: 'light' | 'dark' = 'light'): MfeRouter
   };
 }
 
-/** Uses only native APIs; optional history is a control, not the specified author path. */
+/** Characterizes the original history-free factory, with supplied history as its control. */
 export function createProbeRouter(options: {
   context: MfeRouterContext;
   history?: RouterHistory;

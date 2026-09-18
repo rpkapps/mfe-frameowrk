@@ -1,48 +1,35 @@
 # Implementation progress
 
-## 2026-09-18 — specification and Gate 0
+## Current checkpoint — 2026-09-18
 
-- Read the complete attached specification. The destination repository is empty; there are no repository-specific instructions or existing shell files.
-- Confirmed the stable pnpm release is 12.4.2. Pinned Node 24.19.0 and compatible exact dependency versions.
-- Parallel work: neutral lifecycle implementation, shared lint tooling, router feasibility review, and gate dependency review. Lead engineer owns architecture, integration, and executable feasibility probes.
-- Gate 0 is **blocked; not passed**. Pinned native router construction changes global History methods; the tested native context-refresh path reloads unrelated data. [Evidence and proposed revisions](gate-zero-feasibility.md) preserve the original requirements and record the decisions needed.
-- No Gate 1 or later feature implementation is authorized by a passing gate yet. No packages or applications have been published or deployed.
+**Gate 0 passed with the approved contract revisions.** App factories forward framework-owned history before native router construction; existing shell-state hooks provide live UI while route callbacks receive native load snapshots. [Contract](approved-contract-revisions.md) · [validation scope](gate-zero-validation.md).
 
-## Known integration prerequisites
+- Moved rendering from the test-only candidate into the React adapter. The in-process loader and memory boundary remain test fixtures; no public loader API was introduced.
+- Added immutable field subscriptions and `useUser`/`useGroups`/`useTheme`, preserving no-op snapshots, selectors, and unrelated consumers. Updated the generated-route introductory factory and example.
+- Validated forwarded history and reserved factory/route context, preserving author keys, wrappers, and native error boundaries. Supported native events settle navigation before retiring a conflicting mount; no route tree or router internals are patched.
+- Tested native snapshot timing across an awaited parent, selective theme updates, current subsequent loads, Query ownership, and overlapping mocked session work. Disposal now settles framework transitions even when a native loader ignores cancellation.
+- Independent review found and fixed two integration defects: the root error callback intercepted author-handled errors, and clearing active Query cache entries left their observers holding old data. Session transitions now reset observers before current-option refetch; disabled and keyed consumers have dedicated regressions.
+- No Widgets, MF2/Rspack integration, commands, breadcrumbs, auth/config, CSS compilation, or legacy adapter was added before completing Gate 0. Packages remain private.
 
-- Gate 1 requires the real shell's source or supported integration location, startup/session prerequisites, and development registry enrollment procedure. None is present in this empty repository.
-- Tecton source at the specified revision is accessible. Reproducible distribution remains an implementation task, not an access blocker.
-- Gate 9 requires the legacy repositories or production-equivalent fixtures; contract doubles cannot establish legacy compatibility.
+## Verification record
 
-## Verified checkpoint
+- `corepack pnpm@12.4.2 install --frozen-lockfile` passed with the existing dependency-script policy. No new third-party version or script approval was introduced.
+- `corepack pnpm@12.4.2 run check` passed: generation, Prettier, full ESLint, strict workspace and independent App types, package boundaries, **161 behavior tests**, and real packed-fixture dependency-script controls.
+- `corepack pnpm@12.4.2 run gate:0` passed both revised conformance tests. Assertions are neither skipped nor marked as expected failures.
+- Repeated generation is byte-identical (`59547ee160aa4203bca7d2bea7a68a117b04a85b658df924a336a0da5fbbac17`). The generated tree stays ignored.
+- Independent implementation, acceptance testing, and review covered field subscriptions, native event ordering, reserved keys, error fallbacks, Query observers, session overlap, and disposal. All reported P1/P2 findings are closed with targeted regressions.
 
-- `pnpm run check` passes: deterministic generation, Prettier, shared ESLint presets, strict workspace and separate App typechecks, import boundaries, and **124 tests**. The generated route tree is byte-identical across repeat runs and remains untracked.
-- `pnpm install --frozen-lockfile` passes with pnpm 12.4.2 and no workspace dependency-script approvals. Real packed fixtures prove unreviewed scripts fail without executing, approved exact artifacts execute, and denied scripts remain blocked.
-- `pnpm run gate:0` fails its **two unsatisfied conformance probes**. They are not skipped or marked as expected failures. CI runs this gate separately and therefore remains blocked.
-- Neutral lifecycle ownership covers retry, immutable snapshots, current-attempt fences, synchronous detach, asynchronous cleanup, and structured failures. Independent review found and closed nested-cleanup retry and missing-version-attribution defects; focused regressions cover both.
-- The test-internal React tracer renders through the actual facade/lifecycle/native router and verifies failure/retry/disposal. It also exposes post-loader reserved-context detection and unresolved navigation after a rejected later route. It is not a production adapter or an authenticated shell.
-- Shared lint presets and symbol-aware rules have independent rule/preset/boundary coverage. The introductory native factory/root/augmentation fixture compiles against the exact locked dependencies.
-- No Widgets, federation/build plugin, auth, CSS, scaffold, legacy adapter, or later-gate feature was added while Gate 0 was unresolved. All packages remain private. No release, merge, publication, or deployment occurred.
+These results establish the in-process contract gate. They do not substitute for real browser, authenticated-shell, production performance, or later-gate acceptance.
 
-## Resume conditions
+## Next gate prerequisites
 
-Resolve the explicit history-bootstrap and reactive-context contract decisions,
-then finish the reserved-context/error-navigation proof and rerun Gate 0. Supply
-the real shell/auth/session and registry-enrollment prerequisites before claiming
-Gate 1. Retain all later acceptance gates, including actual legacy compatibility,
-browser integration, performance measurements, and the observed author journeys.
+Gate 1 needs the real shell source or supported integration location, startup/session prerequisites, and development registry enrollment procedure. None was supplied with the initially empty repository. No standalone authentication harness may substitute for that path. Tecton source at the specified revision is accessible; source access is not the blocker.
 
-## QueryClient follow-up
+Gate 9 separately requires legacy repositories or production-equivalent fixtures. Release gates retain observed unfamiliar-developer tasks, agreed performance budgets, browser coverage, and actual legacy compatibility.
 
-- User authorized saving the review branch and requested an investigation of QueryClient's context/reactivity behavior.
-- Pinned source review and three new probes confirm stable-client access plus independent Query subscriptions. Cache changes update `useQuery` consumers without Router invalidation; imperative reads through either context remain non-reactive. With a fresh cache, reuse prevents another mocked query-function execution during invalidation but does not prevent loader/`beforeLoad` execution.
-- The expanded behavior suite passes **127 tests**; strict TypeScript and focused lint/format checks pass for the follow-up. Production contracts and the two original conformance assertions are unchanged.
-- [Query/context evidence](query-context-feasibility.md) records the tested combination and its limits. The recommended shell integration keeps one state source, native route snapshots/services, and direct field subscriptions through the already-specified hooks. Gate 0 remains blocked pending the contract decisions and remaining adapter proofs.
-- Git transport lacked write credentials; automatic approval review initially rejected initializing the empty repository because authorization covered only the review branch. The user then explicitly approved initializing `main` with the repository ignore rules.
+## Earlier decisions and review branch
 
-## Review branch saved
-
-- Initialized `main` with only the repository ignore rules, then saved all 61 tracked checkpoint files to [`feat/mfe-framework`](https://github.com/rpkapps/mfe-frameowrk/tree/feat/mfe-framework) through the connected GitHub app.
-- Verified commit `ee2c91b253e2b1e111c405f8c3d7ba9baf98fbb6` has the exact same Git tree as the locally verified checkpoint (`f3a3aac48a16c9868686a429431ef4870942a475`). The attached full specification, generated files, dependencies, and local test artifacts remain excluded.
-- [GitHub CI run 35302612816](https://github.com/rpkapps/mfe-frameowrk/actions/runs/35302612816) independently passed dependency installation, all static checks, and all 127 behavior tests. It failed only the same two Gate 0 conformance assertions for History patching and context refresh rerunning a loader.
-- The local review branch now tracks the remote branch; the original two local commits remain on `checkpoint/gate-zero-local`. No merge, release, package publication, or deployment occurred. Gate 0 remains blocked as documented above.
+- The original contract was blocked by two reproduced native Router behaviors: default history construction patched global History, and context invalidation reran an unrelated loader. Historical evidence remains in [feasibility](gate-zero-feasibility.md). The original 124-test checkpoint and later 127-test Query comparison passed their regular checks while those original conformance probes remained red.
+- The user authorized saving the review branch, then explicitly authorized initializing the empty repository's `main` with repository ignore rules. The connected GitHub app performed those writes because Git transport lacked write credentials.
+- The first remote implementation commit was `ee2c91b253e2b1e111c405f8c3d7ba9baf98fbb6`; its tree exactly matched the local checkpoint. [CI run 35302612816](https://github.com/rpkapps/mfe-frameowrk/actions/runs/35302612816) independently passed all 127 behavior tests and failed only the two then-unrevised contract assertions.
+- The review branch is [`feat/mfe-framework`](https://github.com/rpkapps/mfe-frameowrk/tree/feat/mfe-framework). Original local history remains on `checkpoint/gate-zero-local`. The attached full specification remains excluded; its approved revisions are recorded in the tracked companion document. No merge, release, package publication, or deployment has occurred.

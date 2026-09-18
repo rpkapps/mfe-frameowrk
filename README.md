@@ -1,8 +1,6 @@
 # MFE framework
 
-Implementation checkpoint for the supplied MFE framework specification. **Gate 0 is blocked; this is not a usable framework release.** No later implementation gate has started.
-
-The checkpoint contains neutral App/lifecycle/error contracts, retry and resource disposal, a side-effect-free React App definition, shared lint tooling, the generated-route type fixture, and executable router feasibility tests. All packages are private while the contract is unresolved.
+**Gate 0 passed** for the supplied specification and [approved contract revisions](docs/approved-contract-revisions.md). This checkpoint contains the React App adapter, neutral lifecycle/error contracts, selective shell-state hooks, shared lint tooling, generated-route author fixture, and executable acceptance tests. All packages remain private; this is not a complete framework release.
 
 ## Verify
 
@@ -14,16 +12,20 @@ corepack pnpm@12.4.2 run check
 corepack pnpm@12.4.2 run gate:0
 ```
 
-`check` verifies implemented behavior, formatting, lint, types, package boundaries, and dependency-script controls. `gate:0` separately asserts the original specification requirements and currently fails. Passing characterization tests does not mean the framework is conformant. CI runs both commands and remains blocked on the gate.
+`check` verifies generation, formatting, lint, strict types, package boundaries, dependency-script controls, and behavior tests. `gate:0` separately verifies the approved history and live-state contract. CI runs both commands. Current results are recorded in [progress](docs/progress.md).
 
 Generation runs automatically before typechecking. `pnpm run generate` is the recovery command. The introductory App has its own TypeScript program and native `Register` augmentation; `routeTree.gen.ts` is generated and ignored.
 
-## Decisions required
+## Contract decisions
 
-1. The specified native `createRouter` factory creates browser history and patches global History before the adapter can replace it. The proposed bootstrap revision forwards a framework-owned history to native `createRouter`.
-2. `router.update({ context })` leaves active native context consumers unchanged. The tested native invalidation path refreshes context but also reruns a default-stale loader. The proposed revision uses the already-specified selective shell-state hooks for reactive UI, retaining native context for route callbacks and session invalidation.
-3. Gate 1 needs the actual shell source/integration location and its startup, session, and registry-enrollment instructions. These are absent from the empty destination repository. Test fixtures cannot establish authenticated-shell integration.
+App factories forward the exact supplied `history` into native `createRouter`, alongside `basePath` and `context`. The history belongs to the framework; feature code keeps using native navigation.
 
-The original public factory contract is retained pending these decisions. No global patch, router-internal mutation, or hidden contract substitution has been added to production framework code.
+Components use `useUser`, `useGroups`, and `useTheme` for live shell state. Router callbacks receive immutable snapshots for their native load/navigation. Theme updates do not reload routes; identity and permission changes explicitly retire obsolete data and invalidate route work. Query keeps one stable client per mount and uses its own native subscriptions.
 
-Read [the feasibility evidence](docs/gate-zero-feasibility.md), [progress](docs/progress.md), [contributing guidance](docs/contributing.md), and [dependency-script policy](docs/dependency-build-policy.md). The complete supplied specification remains the source of requirements; this checkpoint does not waive its later gates.
+The adapter reports reserved-context conflicts, preserves native author error boundaries, and retires failed mounts without patching router internals or shared route trees. [Validation details](docs/gate-zero-validation.md) state the exact diagnostic and cancellation boundaries.
+
+## Next integration prerequisite
+
+Gate 1 requires the actual shell source/integration location plus its startup, authenticated-session, and development registry-enrollment instructions. These were absent from the destination repository. In-process fixtures cannot establish that integration; no standalone authentication harness substitutes for it.
+
+Read [progress](docs/progress.md), [contributing guidance](docs/contributing.md), and [dependency-script policy](docs/dependency-build-policy.md). The supplied specification and approved revisions remain the requirements; later gates are unchanged.

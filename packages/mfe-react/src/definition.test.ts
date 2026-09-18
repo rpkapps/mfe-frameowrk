@@ -1,4 +1,3 @@
-import { createMemoryHistory } from '@tanstack/history';
 import { createRootRouteWithContext, createRouter } from '@tanstack/react-router';
 import { describe, expect, it, vi } from 'vitest';
 import { createApp } from './index';
@@ -6,12 +5,12 @@ import type { AppRouterOptions, MfeRouterContext } from './index';
 
 describe('App definitions before activation', () => {
   it('retains identity and options without constructing or mounting a router', () => {
-    const router = vi.fn(({ basePath, context }: AppRouterOptions) =>
+    const router = vi.fn(({ basePath, context, history }: AppRouterOptions) =>
       createRouter({
         routeTree: createRootRouteWithContext<MfeRouterContext>()(),
         basepath: basePath,
         context,
-        history: createMemoryHistory(),
+        history,
       }),
     );
 

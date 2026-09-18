@@ -288,6 +288,12 @@ importers:
       '@company/mfe-core':
         specifier: workspace:*
         version: link:../mfe-core
+      '@company/mfe-host':
+        specifier: workspace:*
+        version: link:../mfe-host
+      '@tanstack/history':
+        specifier: 1.162.4
+        version: 1.162.4
       '@tanstack/react-query':
         specifier: 5.103.1
         version: 5.103.1(react@19.3.0)

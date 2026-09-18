@@ -1,22 +1,17 @@
-import type { QueryClient } from '@tanstack/react-query';
+import type { RouterHistory } from '@tanstack/history';
 import type { AnyRouter } from '@tanstack/react-router';
 import type { AppDescriptor } from '@company/mfe-core';
 import { createMfeError } from '@company/mfe-core';
+import type { MfeRouterContext } from './router-context';
 
-/** Gate 0 shell fixture data. Service contracts are added at their implementation gates. */
-export interface MfeRouterContext {
-  readonly mfe: {
-    readonly user: { readonly id: string; readonly name: string } | null;
-    readonly groups: readonly string[];
-    readonly theme: 'light' | 'dark';
-    readonly signal: AbortSignal;
-  };
-  readonly queryClient: QueryClient;
-}
+export type { MfeRouterContext } from './router-context';
+export { useUser, useGroups, useTheme } from './shell-state-context';
 
-/** Original specification contract, retained while Gate 0 tests its feasibility. */
+/** Native bootstrap options supplied for one mount; forward all three unchanged. */
 export interface AppRouterOptions {
   readonly basePath: string;
+  /** Framework-owned boundary history, never the raw browser History object. */
+  readonly history: RouterHistory;
   readonly context: MfeRouterContext;
 }
 

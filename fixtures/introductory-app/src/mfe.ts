@@ -2,10 +2,11 @@ import { createApp, type AppRouterOptions } from '@company/mfe-react';
 import { createRouter } from '@tanstack/react-router';
 import { routeTree } from './routeTree.gen';
 
-function makeRouter({ basePath, context }: AppRouterOptions) {
+function makeRouter({ basePath, history, context }: AppRouterOptions) {
   return createRouter({
     routeTree,
     basepath: basePath,
+    history,
     context: { ...context },
     defaultPreload: 'intent',
   });

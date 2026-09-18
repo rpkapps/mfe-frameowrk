@@ -15,7 +15,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { MfeError, MountState } from '@company/mfe-core';
 import { createApp } from '@company/mfe-react';
 import type { AppDefinition, AppRouterOptions, MfeRouterContext } from '@company/mfe-react';
-import { createCandidateMount } from './candidate-adapter';
+import { createTracerMount } from './in-process-host';
+import { readHistoryMethods } from '../router-probe';
 
 interface AuthorContext extends MfeRouterContext {
   readonly authorService: string;
@@ -49,6 +50,14 @@ function ContextView() {
   );
 }
 
+function BrokenFeature(): never {
+  throw new Error('Expected feature render failure');
+}
+
+function NativeFallback() {
+  return <h1>Native error fallback</h1>;
+}
+
 function AuthorWrap({ children }: PropsWithChildren) {
   return <section data-testid="author-wrap">{children}</section>;
 }
@@ -59,17 +68,18 @@ function makeRouter(options: AppRouterOptions) {
   return createRouter({
     routeTree: root.addChildren([index]),
     basepath: options.basePath,
+    history: options.history,
     context: { ...options.context, authorService: 'kept author extension' },
     InnerWrap: AuthorWrap,
     defaultPendingMinMs: 0,
   });
 }
 
-const mounts: ReturnType<typeof createCandidateMount>[] = [];
+const mounts: ReturnType<typeof createTracerMount>[] = [];
 
 function mountDefinition(definition: AppDefinition<AnyRouter>) {
   const reportError = vi.fn<(error: MfeError) => void>();
-  const mount = createCandidateMount({
+  const mount = createTracerMount({
     definitions: new Map([[definition.id, definition]]),
     id: definition.id,
     basePath: '/tracer',
@@ -93,7 +103,7 @@ afterEach(async () => {
   document.body.replaceChildren();
 });
 
-describe('test-internal contract tracer; Gate 0 remains blocked', () => {
+describe('Gate 0 adapter contract tracer', () => {
   it('loads by stable id, renders native context, and disposes the actual React root', async () => {
     const factory = vi.fn(makeRouter);
     const definition = createApp({ id: 'tracer', version: '0.0.1', router: factory });
@@ -115,11 +125,13 @@ describe('test-internal contract tracer; Gate 0 remains blocked', () => {
     expect(factory).toHaveBeenCalledTimes(1);
     const supplied = factory.mock.calls[0]?.[0];
     expect(supplied).toBeDefined();
-    expect(Object.keys(supplied ?? {}).sort()).toEqual(['basePath', 'context']);
+    expect(Object.keys(supplied ?? {}).sort()).toEqual(['basePath', 'context', 'history']);
     expect(supplied?.basePath).toBe('/tracer');
     expect(Object.keys(supplied?.context ?? {}).sort()).toEqual(['mfe', 'queryClient']);
     expect(supplied?.context.queryClient).toBe(mount.queryClient);
     expect(mount.getRouter()?.state.location.pathname).toBe('/');
+    expect(mount.getRouter()?.options.history).toBe(supplied?.history);
+    expect(mount.getRouter()?.history).toBe(supplied?.history);
     expect(mount.getRouter()?.buildLocation({ to: '/' }).href).toBe('/tracer/');
     expect(mount.getRootCount()).toBe(1);
     mount.queryClient.setQueryData(['owned'], 'cached');
@@ -129,6 +141,7 @@ describe('test-internal contract tracer; Gate 0 remains blocked', () => {
     expect(supplied?.context.mfe.signal.aborted).toBe(true);
     expect(mount.getRouter()).toBeUndefined();
     expect(mount.handle.state.status).toBe('disposed');
+    expect(supplied?.history.subscribers.size).toBe(0);
     expect(mount.handle.dispose()).toBe(disposal);
     await act(async () => {
       await disposal;
@@ -163,6 +176,11 @@ describe('test-internal contract tracer; Gate 0 remains blocked', () => {
     expect(mount.getRouter()).toBeUndefined();
     correctBoundary = true;
     expect(factory).toHaveBeenCalledTimes(1);
+    await mount.updateShellState({
+      user: { id: 'fixture-user', name: 'Tracer author' },
+      groups: ['readers'],
+      theme: 'dark',
+    });
 
     const retry = mount.handle.retry();
     expect(mount.handle.state).toEqual({ status: 'pending', attempt: 2 });
@@ -176,6 +194,12 @@ describe('test-internal contract tracer; Gate 0 remains blocked', () => {
       factory.mock.calls[1]?.[0].context.mfe.signal,
     );
     expect(screen.getByRole('heading').textContent).toBe('Tracer author');
+    expect(screen.getByTestId('theme').textContent).toBe('dark');
+    expect(factory.mock.calls[0]?.[0].history).not.toBe(factory.mock.calls[1]?.[0].history);
+    expect(factory.mock.calls[0]?.[0].history.subscribers.size).toBe(0);
+    expect(factory.mock.calls[0]?.[0].context.queryClient).toBe(
+      factory.mock.calls[1]?.[0].context.queryClient,
+    );
   });
 
   it.each(['mfe', 'queryClient'] as const)(
@@ -234,21 +258,14 @@ describe('test-internal contract tracer; Gate 0 remains blocked', () => {
     }
   });
 
-  it('detects merged route replacement but records that the loader already observed it', async () => {
-    const loader = vi.fn((theme: string) => theme);
+  it('rejects omitted history and releases the invalid native default history', async () => {
+    const originalHistory = readHistoryMethods();
     const definition = createApp({
-      id: 'route-conflict',
+      id: 'omitted-history',
       router(options) {
         const root = createRootRouteWithContext<MfeRouterContext>()({ component: Outlet });
-        const index = createRoute({
-          getParentRoute: () => root,
-          path: '/',
-          beforeLoad: () => ({ mfe: { ...options.context.mfe, theme: 'dark' as const } }),
-          loader: ({ context }) => loader(context.mfe.theme),
-          component: ContextView,
-        });
         return createRouter({
-          routeTree: root.addChildren([index]),
+          routeTree: root,
           basepath: options.basePath,
           context: options.context,
         });
@@ -256,13 +273,146 @@ describe('test-internal contract tracer; Gate 0 remains blocked', () => {
     });
     const mount = mountDefinition(definition);
     await expect(mount.start()).rejects.toMatchObject({ code: 'app/invalid-router' });
-    expect(mount.reportError.mock.calls[0]?.[0]).toHaveProperty(
-      'message',
-      expect.stringContaining('route / context.mfe'),
+    expect(mount.reportError.mock.calls[0]?.[0].message).toContain('router.options.history');
+    expect(mount.getRootCount()).toBe(0);
+    expect(readHistoryMethods()).toEqual(originalHistory);
+  });
+
+  it.each(['loader', 'render'] as const)(
+    'preserves native error handling for an author %s failure',
+    async (failure) => {
+      // Native React/Router error boundaries log caught render errors in development.
+      vi.spyOn(console, 'error').mockImplementation(() => {});
+      vi.spyOn(console, 'warn').mockImplementation(() => {});
+      const definition = createApp({
+        id: `native-error-${failure}`,
+        router(options) {
+          const root = createRootRouteWithContext<MfeRouterContext>()({ component: Outlet });
+          const index = createRoute({
+            getParentRoute: () => root,
+            path: '/',
+            loader: () => {
+              if (failure === 'loader') throw new Error('Expected feature loader failure');
+            },
+            component: failure === 'render' ? BrokenFeature : ContextView,
+            errorComponent: NativeFallback,
+          });
+          return createRouter({
+            routeTree: root.addChildren([index]),
+            basepath: options.basePath,
+            history: options.history,
+            context: options.context,
+          });
+        },
+      });
+      const mount = mountDefinition(definition);
+      await act(async () => {
+        await mount.start();
+      });
+      expect(screen.getByRole('heading').textContent).toBe('Native error fallback');
+      expect(mount.handle.state.status).toBe('mounted');
+      expect(mount.getRootCount()).toBe(1);
+      expect(mount.reportError).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each([
+    ['mfe', 'beforeLoad'],
+    ['queryClient', 'beforeLoad'],
+    ['mfe', 'context'],
+    ['queryClient', 'context'],
+  ] as const)('diagnoses a route %s replacement from %s after loading', async (key, source) => {
+    const loader = vi.fn<(value: unknown) => void>();
+    const substituteClient = new QueryClient();
+    const definition = createApp({
+      id: `route-conflict-${key}-${source}`,
+      router(options) {
+        const root = createRootRouteWithContext<MfeRouterContext>()({ component: Outlet });
+        const replacement =
+          key === 'mfe'
+            ? { mfe: { ...options.context.mfe, theme: 'dark' as const } }
+            : { queryClient: substituteClient };
+        const index = createRoute({
+          getParentRoute: () => root,
+          path: '/',
+          context: () => (source === 'context' ? replacement : {}),
+          beforeLoad: async () => {
+            await Promise.resolve();
+            return source === 'beforeLoad' ? replacement : {};
+          },
+          loader: ({ context }) => loader(context[key]),
+          component: ContextView,
+        });
+        return createRouter({
+          routeTree: root.addChildren([index]),
+          basepath: options.basePath,
+          history: options.history,
+          context: options.context,
+        });
+      },
+    });
+    const mount = mountDefinition(definition);
+    await expect(mount.start()).rejects.toMatchObject({ code: 'app/invalid-router' });
+    expect(mount.reportError.mock.calls[0]?.[0].message).toContain(`route / context.${key}`);
+    // The integration diagnoses author conflicts; it is not a sandbox that
+    // prevents invalid author callbacks from executing before the diagnostic.
+    expect(loader).toHaveBeenCalledWith(
+      key === 'mfe' ? expect.objectContaining({ theme: 'dark' }) : substituteClient,
     );
-    expect(loader).toHaveBeenCalledWith('dark');
     expect(mount.getRootCount()).toBe(0);
     expect(mount.getRouter()).toBeUndefined();
+    substituteClient.clear();
+  });
+
+  it('accepts exact reserved values and preserves native author route extensions', async () => {
+    const authorService = Object.freeze({ name: 'author service' });
+    const loader = vi.fn<(value: unknown) => void>();
+    const definition = createApp({
+      id: 'forwarded-route-context',
+      router(options) {
+        const root = createRootRouteWithContext<
+          MfeRouterContext & { authorService: typeof authorService }
+        >()({ component: Outlet });
+        const index = createRoute({
+          getParentRoute: () => root,
+          path: '/',
+          context: ({ context }) => ({ mfe: context.mfe, queryClient: context.queryClient }),
+          beforeLoad: async ({ context }) => {
+            await Promise.resolve();
+            return {
+              mfe: context.mfe,
+              queryClient: context.queryClient,
+              user: 'author route data',
+            };
+          },
+          loader: ({ context }) => loader(context),
+          component: () => <h1>Forwarded context</h1>,
+        });
+        return createRouter({
+          routeTree: root.addChildren([index]),
+          basepath: options.basePath,
+          history: options.history,
+          context: { ...options.context, authorService },
+        });
+      },
+    });
+    const mount = mountDefinition(definition);
+    await act(async () => {
+      await mount.start();
+    });
+    const router = mount.getRouter();
+    const context = router?.options.context as MfeRouterContext | undefined;
+    expect(loader).toHaveBeenCalledWith(
+      expect.objectContaining({
+        mfe: context?.mfe,
+        queryClient: mount.queryClient,
+        authorService,
+        user: 'author route data',
+      }),
+    );
+    expect(mount.handle.state.status).toBe('mounted');
+    expect(mount.reportError).not.toHaveBeenCalled();
+    expect(screen.getByRole('heading').textContent).toBe('Forwarded context');
   });
 
   it('fences a pending loader after disposal and never attaches its late result', async () => {
@@ -282,6 +432,7 @@ describe('test-internal contract tracer; Gate 0 remains blocked', () => {
       return createRouter({
         routeTree: root.addChildren([index]),
         basepath: options.basePath,
+        history: options.history,
         context: options.context,
       });
     });
@@ -305,65 +456,74 @@ describe('test-internal contract tracer; Gate 0 remains blocked', () => {
     expect(mount.reportError).not.toHaveBeenCalled();
   });
 
-  it('detects later conflicts through InnerWrap but cannot settle the retired navigation', async () => {
-    const definition = createApp({
-      id: 'later-route-conflict',
-      router(options) {
-        const root = createRootRouteWithContext<AuthorContext>()({ component: Outlet });
-        const index = createRoute({
-          getParentRoute: () => root,
-          path: '/',
-          component: ContextView,
+  it.each(['mfe', 'queryClient'] as const)(
+    'settles native navigation and retires a later async %s conflict',
+    async (key) => {
+      const substituteClient = new QueryClient();
+      const loader = vi.fn<(value: unknown) => void>();
+      const definition = createApp({
+        id: `later-route-conflict-${key}`,
+        router(options) {
+          const root = createRootRouteWithContext<AuthorContext>()({ component: Outlet });
+          const index = createRoute({
+            getParentRoute: () => root,
+            path: '/',
+            component: ContextView,
+          });
+          const conflict = createRoute({
+            getParentRoute: () => root,
+            path: '/conflict',
+            beforeLoad: async () => {
+              await Promise.resolve();
+              return key === 'mfe'
+                ? { mfe: { ...options.context.mfe, theme: 'dark' as const } }
+                : { queryClient: substituteClient };
+            },
+            loader: ({ context }) => loader(context[key]),
+            component: ContextView,
+          });
+          return createRouter({
+            routeTree: root.addChildren([index, conflict]),
+            basepath: options.basePath,
+            history: options.history,
+            context: { ...options.context, authorService: 'preserved' },
+            defaultPendingMinMs: 0,
+          });
+        },
+      });
+      const mount = mountDefinition(definition);
+      await act(async () => {
+        await mount.start();
+      });
+      const router = mount.getRouter();
+      expect(router).toBeDefined();
+      let navigation: Promise<void> | undefined;
+      let navigationCompleted = false;
+      await act(async () => {
+        navigation = router?.navigate({ to: '/conflict' }).then(() => {
+          navigationCompleted = true;
         });
-        const conflict = createRoute({
-          getParentRoute: () => root,
-          path: '/conflict',
-          beforeLoad: () => ({ mfe: { ...options.context.mfe, theme: 'dark' as const } }),
-          component: ContextView,
-        });
-        return createRouter({
-          routeTree: root.addChildren([index, conflict]),
-          basepath: options.basePath,
-          context: { ...options.context, authorService: 'preserved' },
-          defaultPendingMinMs: 0,
-        });
-      },
-    });
-    const mount = mountDefinition(definition);
-    await act(async () => {
-      await mount.start();
-    });
-    expect(mount.handle.state.status).toBe('mounted');
-
-    let navigationCompleted = false;
-    const navigationErrors: unknown[] = [];
-    await act(async () => {
-      mount
-        .getRouter()
-        ?.navigate({ to: '/conflict' })
-        .then(
-          () => {
-            navigationCompleted = true;
-          },
-          (cause: unknown) => {
-            navigationErrors.push(cause);
-          },
-        );
-      await Promise.resolve();
-    });
-    await waitFor(() => expect(mount.handle.state.status).toBe('error'));
-    expect(mount.reportError).toHaveBeenCalledOnce();
-    expect(mount.reportError.mock.calls[0]?.[0]).toMatchObject({ code: 'app/invalid-router' });
-    expect(mount.reportError.mock.calls[0]?.[0].message).toContain('route /conflict context.mfe');
-    expect(mount.getRouter()).toBeUndefined();
-    expect(mount.placement.childElementCount).toBe(0);
-    expect(screen.queryByRole('heading')).toBeNull();
-    await act(async () => {
-      await mount.handle.dispose();
-    });
-    expect(navigationErrors).toHaveLength(0);
-    // The rejected presentation never completes native navigation. This
-    // characterization is a limitation of the candidate, not gate acceptance.
-    expect(navigationCompleted).toBe(false);
-  });
+        await Promise.resolve();
+      });
+      await waitFor(() => expect(navigationCompleted).toBe(true));
+      await navigation;
+      await waitFor(() => expect(mount.handle.state.status).toBe('error'));
+      expect(mount.reportError).toHaveBeenCalledOnce();
+      expect(mount.reportError.mock.calls[0]?.[0]).toMatchObject({ code: 'app/invalid-router' });
+      expect(mount.reportError.mock.calls[0]?.[0].message).toContain(
+        `route /conflict context.${key}`,
+      );
+      expect(loader).toHaveBeenCalledWith(
+        key === 'mfe' ? expect.objectContaining({ theme: 'dark' }) : substituteClient,
+      );
+      expect(mount.getRouter()).toBeUndefined();
+      expect(mount.placement.childElementCount).toBe(0);
+      expect(screen.queryByRole('heading')).toBeNull();
+      await act(async () => {
+        await mount.handle.dispose();
+      });
+      expect(mount.getRootCount()).toBe(0);
+      substituteClient.clear();
+    },
+  );
 });

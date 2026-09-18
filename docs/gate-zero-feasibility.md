@@ -1,10 +1,11 @@
-# Gate 0 feasibility decision
+# Original Gate 0 feasibility findings
 
-**Status: blocked; Gate 0 has not passed.** The original native factory creates a
-global History patch before the adapter can receive its return value. The tested
-native context-refresh strategy also reloads an unrelated loader. These findings
-block expansion under §16. The revisions below are proposals, not implemented or
-accepted contract changes.
+**Historical report for the original contract.** The user subsequently approved
+both revisions below, and they are implemented in the React adapter and author
+fixture. See [the approved contract](approved-contract-revisions.md),
+[current validation](gate-zero-validation.md), and [progress](progress.md).
+The source observations remain valid: the original history-free factory patches
+global History, and native context invalidation can rerun unrelated loaders.
 
 This is a focused feasibility report, not the complete Gate 0 acceptance suite.
 It does not establish a working App adapter, real-shell integration, federation,
@@ -90,7 +91,7 @@ replacing internal methods, or treating an SSR construction trick as a proven
 client lifecycle is not an established supported alternative. No alternative
 meeting the complete original contract was demonstrated by this review.
 
-## Proposed revision 1: forward framework-owned boundary history
+## Approved revision 1: forward framework-owned boundary history
 
 Add `history: RouterHistory` to `AppRouterOptions`. The adapter creates a constrained
 boundary history before invoking the author factory. Require the author to
@@ -119,7 +120,7 @@ larger author and typing change: the adapter would construct the router and the
 existing return-type augmentation would need replacement. It is not needed to
 address the observed default-history problem.
 
-## Proposed revision 2: use existing hooks for reactive shell fields
+## Approved revision 2: use existing hooks for reactive shell fields
 
 Define native `context.mfe` as the immutable snapshot supplied to a route
 invocation/navigation. Components needing live user, groups, or theme use the
@@ -136,7 +137,15 @@ this is a changed promise, not an implementation of the original native-context
 reactivity requirement. The revised hooks and transition policy still need
 implementation and tests.
 
-## Reserved-context enforcement remains unresolved
+## Original reserved-context investigation
+
+The following records the investigation before implementation. The current
+adapter validates initial matches before rendering, then observes supported
+native load/render events for later conflicts. It retires a failed mount after
+native presentation acknowledgement rather than rejecting `InnerWrap` rendering.
+Tests now prove navigation settlement, preserved author wrappers/error boundaries,
+and cleanup without mutating shared route trees. See the current validation report
+for the precise post-load diagnostic boundary and preload limitations.
 
 Factory-level equality checks can validate the supplied `mfe` and `queryClient`.
 The current probes do not implement or prove those checks. Native route context
