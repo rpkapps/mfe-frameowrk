@@ -1,0 +1,10 @@
+node_modules/
+dist/
+coverage/
+test-results/
+playwright-report/
+*.tsbuildinfo
+routeTree.gen.ts
+.env.local
+.gate-results/
+docs/mfe-framework-spec.md
