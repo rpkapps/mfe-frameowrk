@@ -36,7 +36,7 @@ import {
   PageHeaderNav,
   PageHeaderTitle,
 } from '@tecton/react/tecton/page-header';
-import { useCallback, useState } from 'react';
+import { useCallback, useId, useState } from 'react';
 import { CompiledAdapterConsumer, UncompiledAdapterConsumer } from './compiler-consumers';
 
 type Discipline = 'Subsurface' | 'Drilling' | 'Facilities';
@@ -114,18 +114,22 @@ export function DiscoveryScreen({ framing = false }: { framing?: boolean }) {
     },
   });
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
   const [view, setView] = useState<'list' | 'graph'>('list');
   const [collapsed, setCollapsed] = useState<ReadonlySet<string>>(new Set());
   const [selected, setSelected] = useState('1.01');
   const [showAll, setShowAll] = useState(true);
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
   const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null);
+  const sidebarReactId = useId();
+  const sidebarId = `project-details-sidebar-${sidebarReactId}`;
   const shouldBlockNavigation = useCallback(() => {
     return hasUnsavedChanges;
   }, [hasUnsavedChanges]);
   const blocker = useBlocker({
     withResolver: true,
     shouldBlockFn: shouldBlockNavigation,
+    enableBeforeUnload: shouldBlockNavigation,
   });
 
   function toggleAlternative(code: string) {
@@ -172,16 +176,29 @@ export function DiscoveryScreen({ framing = false }: { framing?: boolean }) {
         </PortalProvider>
       )}
       <AppShellSidebar
+        id={sidebarId}
         className={
-          sidebarOpen
-            ? 'absolute inset-y-0 left-0 z-10 p-4 shadow-xl md:static md:shadow-none'
-            : 'hidden p-4 md:flex'
+          sidebarCollapsed
+            ? 'hidden md:hidden'
+            : sidebarOpen
+              ? 'absolute inset-y-0 left-0 z-10 p-4 shadow-xl md:static md:shadow-none'
+              : 'hidden p-4 md:flex'
         }
         aria-label="Project details"
       >
         <div className="mb-6 flex items-center justify-between">
           <h2 className="font-medium">Project details</h2>
-          <PanelIcon className="text-muted-foreground" size={19} />
+          <Button
+            className="hidden md:inline-flex"
+            variant="ghost"
+            size="icon"
+            aria-label="Collapse project details"
+            aria-expanded={!sidebarCollapsed}
+            aria-controls={sidebarId}
+            onPress={() => setSidebarCollapsed(true)}
+          >
+            <PanelIcon className="text-muted-foreground" size={19} />
+          </Button>
         </div>
         <dl className="grid gap-3">
           <div className="flex items-center justify-between">
@@ -292,10 +309,27 @@ export function DiscoveryScreen({ framing = false }: { framing?: boolean }) {
             size="icon"
             aria-label="Toggle project details"
             aria-expanded={sidebarOpen}
-            onPress={() => setSidebarOpen((value) => !value)}
+            aria-controls={sidebarId}
+            onPress={() => {
+              setSidebarCollapsed(false);
+              setSidebarOpen((value) => !value);
+            }}
           >
             <PanelIcon />
           </Button>
+          {sidebarCollapsed && (
+            <Button
+              className="hidden md:inline-flex"
+              variant="ghost"
+              size="icon"
+              aria-label="Expand project details"
+              aria-expanded={false}
+              aria-controls={sidebarId}
+              onPress={() => setSidebarCollapsed(false)}
+            >
+              <PanelIcon />
+            </Button>
+          )}
           <PageHeaderContent className="max-sm:basis-[calc(100%-3.75rem)]">
             <PageHeaderTitle>Orion Discovery</PageHeaderTitle>
           </PageHeaderContent>

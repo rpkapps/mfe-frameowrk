@@ -84,6 +84,46 @@ test('isolates one Widget key update across the 50 Widget, 100 key fixture', asy
   await expect(grid).toHaveAttribute('data-widget-count', '50');
   const widgets = grid.locator('[data-widget-scaling-id]');
   await expect(widgets).toHaveCount(50);
+
+  const layout = await page.evaluate(() => {
+    const box = (selector: string) => {
+      const element = document.querySelector(selector);
+      const rect = element?.getBoundingClientRect();
+      return rect
+        ? { left: rect.left, top: rect.top, right: rect.right, bottom: rect.bottom }
+        : null;
+    };
+    const pane = document.querySelector('[data-testid="widget-scaling-pane"]');
+    return {
+      first: box('[data-testid="dual-first"]'),
+      second: box('[data-testid="dual-second"]'),
+      pane: box('[data-testid="widget-scaling-pane"]'),
+      firstWidget: box('[data-widget-scaling-id="widget-scaling-1"]'),
+      secondWidget: box('[data-widget-scaling-id="widget-scaling-2"]'),
+      scrollHeight: pane?.scrollHeight ?? 0,
+      clientHeight: pane?.clientHeight ?? 0,
+    };
+  });
+  expect(layout.first).not.toBeNull();
+  expect(layout.second).not.toBeNull();
+  expect(layout.pane).not.toBeNull();
+  expect(layout.first!.bottom).toBeLessThanOrEqual(layout.pane!.top);
+  expect(layout.second!.bottom).toBeLessThanOrEqual(layout.pane!.top);
+  expect(layout.secondWidget!.left).toBeGreaterThan(layout.firstWidget!.left);
+  expect(layout.scrollHeight).toBeGreaterThan(layout.clientHeight);
+  await page.locator('[data-testid="widget-scaling-pane"]').evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  const lastWidgetReachable = await page.evaluate(() => {
+    const pane = document.querySelector('[data-testid="widget-scaling-pane"]');
+    const last = document.querySelector('[data-widget-scaling-id="widget-scaling-50"]');
+    if (!pane || !last) return false;
+    const paneRect = pane.getBoundingClientRect();
+    const lastRect = last.getBoundingClientRect();
+    return lastRect.top >= paneRect.top && lastRect.bottom <= paneRect.bottom;
+  });
+  expect(lastWidgetReachable).toBe(true);
+
   await expect
     .poll(
       async () =>
@@ -111,4 +151,43 @@ test('isolates one Widget key update across the 50 Widget, 100 key fixture', asy
   expect(Number(after[0]?.commits ?? 0)).toBeGreaterThan(Number(before[0]?.commits ?? 0));
   expect(after[0]?.keys).toBe('1,0');
   expect(after.slice(1)).toEqual(before.slice(1));
+
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.reload();
+  await expect(page.getByTestId('widget-scaling-grid')).toHaveAttribute('data-widget-count', '50');
+  await expect(page.locator('[data-widget-scaling-id]')).toHaveCount(50);
+  await expect(page.locator('[data-widget-scaling-id="widget-scaling-50"]')).toBeAttached();
+  const mobileLayout = await page.evaluate(() => {
+    const rect = (selector: string) => document.querySelector(selector)?.getBoundingClientRect();
+    const first = rect('[data-testid="dual-first"]');
+    const second = rect('[data-testid="dual-second"]');
+    const pane = rect('[data-testid="widget-scaling-pane"]');
+    return {
+      viewportFits: document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+      panesStacked:
+        first !== undefined &&
+        second !== undefined &&
+        second.top >= first.bottom &&
+        first.height > 0 &&
+        second.height > 0,
+      paneBelowPanes:
+        second !== undefined && pane !== undefined && pane.top >= second.bottom && pane.height > 0,
+    };
+  });
+  expect(mobileLayout.viewportFits).toBe(true);
+  expect(mobileLayout.panesStacked).toBe(true);
+  expect(mobileLayout.paneBelowPanes).toBe(true);
+  await page.locator('[data-testid="widget-scaling-pane"]').evaluate((element) => {
+    element.scrollTop = element.scrollHeight;
+  });
+  expect(
+    await page.evaluate(() => {
+      const pane = document.querySelector('[data-testid="widget-scaling-pane"]');
+      const last = document.querySelector('[data-widget-scaling-id="widget-scaling-50"]');
+      if (!pane || !last) return false;
+      const paneRect = pane.getBoundingClientRect();
+      const lastRect = last.getBoundingClientRect();
+      return lastRect.top >= paneRect.top && lastRect.bottom <= paneRect.bottom;
+    }),
+  ).toBe(true);
 });

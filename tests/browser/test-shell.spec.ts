@@ -232,6 +232,45 @@ test('keeps the remote visible when browser Back is canceled, then proceeds once
   ).toBeVisible();
 });
 
+test('only prompts on reload while the review has unsaved changes', async ({ page }) => {
+  let reloadDialogs = 0;
+  page.on('dialog', async (dialog) => {
+    expect(dialog.type()).toBe('beforeunload');
+    reloadDialogs += 1;
+    await dialog.accept();
+  });
+
+  await page.goto('/discovery/');
+  await expect(page.getByRole('heading', { name: 'Orion Discovery', exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Graph', exact: true }).click();
+  await page.reload();
+  expect(reloadDialogs).toBe(0);
+  await expect(page.getByRole('heading', { name: 'Orion Discovery', exact: true })).toBeVisible();
+
+  await armUnsavedChanges(page);
+  await page.reload();
+  expect(reloadDialogs).toBe(1);
+  await expect(page.getByRole('heading', { name: 'Orion Discovery', exact: true })).toBeVisible();
+
+  await armUnsavedChanges(page);
+  await page.getByRole('button', { name: 'Mark review saved', exact: true }).click();
+  await page.reload();
+  expect(reloadDialogs).toBe(1);
+});
+
+test('collapses and reopens project details on desktop', async ({ page }) => {
+  await page.goto('/discovery/');
+  const sidebar = page.getByRole('complementary', { name: 'Project details' });
+  await expect(sidebar).toBeVisible();
+  await sidebar.getByRole('button', { name: 'Collapse project details' }).click();
+  await expect(sidebar).toBeHidden();
+
+  const reopen = page.getByRole('button', { name: 'Expand project details' });
+  await expect(reopen).toBeVisible();
+  await reopen.click();
+  await expect(sidebar).toBeVisible();
+});
+
 test('isolates two real MF2 mounts of one generated App and disposes one independently', async ({
   page,
 }) => {

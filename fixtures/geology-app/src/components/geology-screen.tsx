@@ -32,6 +32,8 @@ export function GeologyScreen() {
   const theme = useTheme();
   const [preset, setPreset] = useState(presets[0]!);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [presetsOpen, setPresetsOpen] = useState(true);
+  const presetListId = useId();
   const [zoom, setZoom] = useState(1);
   const [layersOpen, setLayersOpen] = useState(false);
   const [layers, setLayers] = useState<ReadonlySet<Layer>>(
@@ -73,11 +75,23 @@ export function GeologyScreen() {
         }
         aria-label="Map presets"
       >
-        <div className="flex items-center justify-between px-3 py-4">
-          <h2 className="text-sm font-medium">Pre-sets</h2>
-          <ChevronDownIcon size={19} className="text-muted-foreground" />
-        </div>
-        <div className="grid gap-3 px-2">
+        <h2>
+          <Button
+            variant="ghost"
+            className="h-auto w-full justify-between rounded-none px-3 py-4 text-sm font-medium"
+            aria-expanded={presetsOpen}
+            aria-controls={presetListId}
+            onPress={() => setPresetsOpen((value) => !value)}
+          >
+            <span>Pre-sets</span>
+            <ChevronDownIcon
+              size={19}
+              className={`text-muted-foreground transition-transform ${presetsOpen ? '' : '-rotate-90'}`}
+              aria-hidden="true"
+            />
+          </Button>
+        </h2>
+        <div id={presetListId} hidden={!presetsOpen} className="grid gap-3 px-2">
           {presets.map((item) => (
             <button
               key={item.title}

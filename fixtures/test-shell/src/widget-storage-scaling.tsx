@@ -80,9 +80,15 @@ export function WidgetScalingGrid({
   readonly valueForWidget?: (index: number) => number;
 }) {
   return (
-    <div data-testid="widget-scaling-grid" data-widget-count={SCALING_WIDGET_COUNT}>
+    <div
+      data-testid="widget-scaling-grid"
+      data-widget-count={SCALING_WIDGET_COUNT}
+      className="grid min-w-0 grid-cols-[repeat(auto-fill,minmax(12rem,1fr))] gap-2"
+    >
       {widgetScalingLazyWidgets.map((Widget, index) => (
-        <Widget key={scalingWidgetIds[index]} value={valueForWidget?.(index) ?? value} />
+        <div key={scalingWidgetIds[index]} className="min-w-0">
+          <Widget value={valueForWidget?.(index) ?? value} />
+        </div>
       ))}
     </div>
   );

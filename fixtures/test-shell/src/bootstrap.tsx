@@ -193,11 +193,18 @@ function ShellApplication() {
         </div>
       )}
       {scaleRoute ? (
-        <div className="grid min-h-0 flex-1 gap-3 p-3">
-          <DualDiscovery theme={theme} />
-          <Suspense fallback={<div role="status">Loading scale Widgets…</div>}>
-            <WidgetScalingGrid />
-          </Suspense>
+        <div className="flex min-h-0 flex-1 flex-col gap-3 p-3">
+          <div className="flex min-h-0 flex-[2]">
+            <DualDiscovery theme={theme} />
+          </div>
+          <div
+            data-testid="widget-scaling-pane"
+            className="min-h-0 flex-1 overflow-auto rounded border p-2"
+          >
+            <Suspense fallback={<div role="status">Loading scale Widgets…</div>}>
+              <WidgetScalingGrid />
+            </Suspense>
+          </div>
         </div>
       ) : dualDiscovery ? (
         <DualDiscovery theme={theme} />
