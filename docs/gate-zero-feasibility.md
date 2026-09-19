@@ -15,12 +15,12 @@ browser navigation, reserved-context enforcement, or later implementation gates.
 
 Independently reviewed `tests/router-probe.tsx`,
 `tests/router-characterization.test.tsx`, and
-`tests/conformance/gate-zero.test.tsx`, inspected installed dependency source, and
+`tests/conformance/app-adapter-contract.test.tsx`, inspected installed dependency source, and
 reran both focused suites on 2026-09-18:
 
 ```sh
 pnpm exec vitest run tests/router-characterization.test.tsx
-pnpm run gate:0
+pnpm run test:conformance
 ```
 
 The independent rerun invoked the installed Vitest executable directly; it used

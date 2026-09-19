@@ -2,9 +2,17 @@
 import { cleanup, render, screen, waitFor } from '@testing-library/react';
 import { afterEach, expect, it, vi } from 'vitest';
 import type { ShellState } from '@company/mfe-core';
-import { createAppRuntime, createBrowserNavigation } from '@company/mfe-host';
+import {
+  createAppRuntime,
+  createBrowserNavigation,
+  createShellSession,
+  createShellState,
+  createWidgetRuntime,
+} from '@company/mfe-host';
+import { createInternalStorageCoordinator } from '@company/mfe-host/internal';
 import type { AppAdapter } from '@company/mfe-host';
 import { AppHost } from './app-host';
+import { MfeHostProvider } from './host-context';
 
 afterEach(cleanup);
 
@@ -36,38 +44,45 @@ it('preserves the mount across inline navigation callbacks and shell-state updat
     adapters: [{ id: 'plain-dom', create }],
     reportError,
   });
+  const widgetRuntime = createWidgetRuntime({
+    registry: [],
+    adapter: { create: () => ({ mount: () => {} }) },
+    reportError,
+  });
   const initialState: ShellState = { user: null, groups: [], theme: 'light' };
+  const shellState = createShellState(initialState);
+  const sessionCoordinator = createInternalStorageCoordinator({ generation: 'app-host-test' });
+  const session = createShellSession({
+    coordinator: sessionCoordinator,
+    createGeneration: () => 'app-host-test-next',
+    initial: initialState,
+    store: shellState,
+  });
   const originalNavigation = vi.fn(() => navigation.createBoundaryHistory('/example'));
-  const freshNavigation = vi.fn(() => navigation.createBoundaryHistory('/example'));
 
   try {
     const view = render(
-      <AppHost
-        runtime={runtime}
-        id="example"
-        basePath="/example"
-        shellState={initialState}
-        createNavigation={() => originalNavigation()}
-      />,
+      <MfeHostProvider
+        value={{
+          runtime,
+          shellState,
+          createNavigation: () => originalNavigation(),
+          widgetRuntime,
+          session,
+        }}
+      >
+        <AppHost appId="example" basePath="/example" />
+      </MfeHostProvider>,
     );
     const content = await screen.findByTestId('mounted-app');
     expect(content.textContent).toBe('light');
 
-    view.rerender(
-      <AppHost
-        runtime={runtime}
-        id="example"
-        basePath="/example"
-        shellState={{ ...initialState, theme: 'dark' }}
-        createNavigation={() => freshNavigation()}
-      />,
-    );
+    shellState.update({ ...initialState, theme: 'dark' });
     await waitFor(() => expect(content.textContent).toBe('dark'));
     expect(screen.getByTestId('mounted-app')).toBe(content);
     expect(create).toHaveBeenCalledTimes(1);
-    expect(load).toHaveBeenCalledTimes(1);
+    expect(load).toHaveBeenCalledTimes(2);
     expect(originalNavigation).toHaveBeenCalledTimes(1);
-    expect(freshNavigation).not.toHaveBeenCalled();
     expect(detach).not.toHaveBeenCalled();
 
     view.unmount();
@@ -77,6 +92,9 @@ it('preserves the mount across inline navigation callbacks and shell-state updat
     expect(reportError).not.toHaveBeenCalled();
   } finally {
     cleanup();
+    shellState.dispose();
+    session.dispose();
+    sessionCoordinator.dispose();
     navigation.dispose();
   }
 });

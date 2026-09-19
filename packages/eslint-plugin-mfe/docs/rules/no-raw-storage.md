@@ -6,13 +6,12 @@ skips definition-ID namespacing, schema validation, retention rules, and
 reactive notifications for framework-managed subscribers.
 
 The `useMfeStorage` and `useStoredState` examples below describe the
-author-facing storage facade planned for Gate3; they are not exports in the
-current Gate2 surface. Gate2 framework integration routes storage through the
-host-owned `createStorageCoordinator` from `@company/mfe-host` and keeps that
-implementation detail out of author imports. Use the facade when it is
-available in the generated author surface.
+author-facing storage facade exported by the React package. Framework-owned
+integration routes storage through the host-owned `createStorageCoordinator`
+from `@company/mfe-host` and keeps that implementation detail out of author
+imports. Use the facade in author components and hooks.
 
-The planned imperative handle is used when code needs an explicit read, write,
+mfe storage's imperative handle is used when code needs an explicit read, write,
 migration, or removal:
 
 ```tsx

@@ -8,6 +8,12 @@ import { createMountLifecycle } from './mount-lifecycle';
 import { resolveMountDeadlines } from './mount-lifecycle';
 import type { MountAttempt, MountDeadlines, MountLifecycle } from './mount-lifecycle';
 import { createShellState } from './shell-state';
+import type {
+  InternalMfeDefinitionStorage,
+  InternalStorageCoordinator,
+  MfeDefinitionStorage,
+} from './storage';
+import type { ShellSessionBoundary } from './storage-session';
 
 export interface AppRegistration {
   readonly id: string;
@@ -29,6 +35,10 @@ export interface AppAdapterOptions {
   readonly placement: HTMLElement;
   readonly shellState: ShellStateStore;
   readonly createNavigation?: () => BoundaryHistory;
+  /** Runtime-owned namespaced services shared by all mounts of this definition. */
+  readonly storage?: InternalMfeDefinitionStorage;
+  /** Public read/write facade paired with `storage` by the shell coordinator. */
+  readonly publicStorage?: MfeDefinitionStorage;
 }
 
 /** The host owns lifecycle; adapters register attempt resources on MountAttempt. */
@@ -57,8 +67,21 @@ export interface AppMount extends MountLifecycle {
   readonly updateShellState: (next: ShellState) => Promise<void>;
 }
 
+export interface StorageRuntimeOptions {
+  readonly coordinator: InternalStorageCoordinator;
+  /** Deprecated compatibility field; session retirement belongs to the shell boundary. */
+  readonly createGeneration?: () => string;
+  /** Explicit shell boundary retires session storage before App state publication. */
+  readonly session?: ShellSessionBoundary;
+}
+
 export interface AppRuntime {
   readonly mountApp: (options: AppMountOptions) => AppMount;
+  /** Load and validate an App definition without creating placement or lifecycle state. */
+  readonly preloadApp: (options: {
+    readonly id: string;
+    readonly signal: AbortSignal;
+  }) => Promise<unknown>;
 }
 
 function report(sink: (error: MfeError) => void, error: MfeError): void {
@@ -102,6 +125,16 @@ function safeRegistration(value: unknown): AppRegistration | undefined {
   }
 }
 
+function isLoadedDefinition(value: unknown, id: string, kind: 'app' | 'widget'): boolean {
+  try {
+    if (typeof value !== 'object' || value === null) return false;
+    const record = value as { readonly kind?: unknown; readonly id?: unknown };
+    return record.kind === kind && record.id === id;
+  } catch {
+    return false;
+  }
+}
+
 function invalidRegistry(id: string, observed: string, duplicate = false): MfeError {
   return createMfeError({
     id,
@@ -131,6 +164,13 @@ function createSharedLoader() {
     signal: AbortSignal,
     retry: boolean,
   ): Promise<unknown> {
+    if (signal.aborted) {
+      return Promise.reject(
+        signal.reason instanceof Error
+          ? signal.reason
+          : new DOMException('App load aborted', 'AbortError'),
+      );
+    }
     let operation = pending.get(entry.registration.id);
     if (!operation) {
       const controller = new AbortController();
@@ -210,6 +250,8 @@ export function createAppRuntime(options: {
   readonly reportError: (error: MfeError) => void;
   /** Shell-owned total deadlines for load, mount, and disposal phases. */
   readonly deadlines?: Partial<MountDeadlines>;
+  /** One coordinator is shared by every definition and mount in this runtime. */
+  readonly storage?: StorageRuntimeOptions;
 }): AppRuntime {
   const adapters = new Map<string, AppAdapter>();
   for (const adapter of options.adapters) {
@@ -221,6 +263,43 @@ export function createAppRuntime(options: {
   }
   const deadlines = resolveMountDeadlines(options.deadlines);
   const sharedLoader = createSharedLoader();
+  const failedLoads = new Set<string>();
+  async function preloadBounded(
+    entry: { readonly registration: AppRegistration },
+    signal: AbortSignal,
+    retry: boolean,
+  ): Promise<unknown> {
+    const controller = new AbortController();
+    let timedOut = false;
+    const forwardAbort = () => controller.abort(signal.reason);
+    const timer = setTimeout(() => {
+      timedOut = true;
+      controller.abort(new DOMException('App preload timed out', 'TimeoutError'));
+    }, deadlines.loadMs);
+    if (signal.aborted) forwardAbort();
+    else signal.addEventListener('abort', forwardAbort, { once: true });
+    try {
+      return await sharedLoader.load(entry, controller.signal, retry);
+    } catch (cause) {
+      if (timedOut) {
+        throw createMfeError({
+          id: entry.registration.id,
+          code: 'load/timeout',
+          operation: 'preload app',
+          resource: 'registered app loader',
+          expected: `the App loader to settle within ${deadlines.loadMs}ms`,
+          observed: 'the preload deadline elapsed',
+          owner: 'the neutral host runtime',
+          repair: 'Check the remote availability, then retry the App.',
+          cause,
+        });
+      }
+      throw cause;
+    } finally {
+      clearTimeout(timer);
+      signal.removeEventListener('abort', forwardAbort);
+    }
+  }
   const registry = new Map<string, { registration: AppRegistration; adapter: AppAdapter }>();
   const normalized = normalizeRegistry(options.registry);
   for (const { error } of normalized.quarantined) report(options.reportError, error);
@@ -249,6 +328,30 @@ export function createAppRuntime(options: {
   }
 
   return {
+    async preloadApp(preloadOptions) {
+      const entry = registry.get(preloadOptions.id);
+      if (!entry) throw invalidRegistry(preloadOptions.id, 'unregistered app ID');
+      let definition: unknown;
+      try {
+        definition = await preloadBounded(
+          entry,
+          preloadOptions.signal,
+          failedLoads.has(preloadOptions.id),
+        );
+      } catch (cause) {
+        if (!preloadOptions.signal.aborted) failedLoads.add(preloadOptions.id);
+        throw cause;
+      }
+      if (!isLoadedDefinition(definition, preloadOptions.id, 'app')) {
+        failedLoads.add(preloadOptions.id);
+        throw invalidRegistry(
+          preloadOptions.id,
+          'loaded definition has an incompatible kind or ID',
+        );
+      }
+      failedLoads.delete(preloadOptions.id);
+      return definition;
+    },
     mountApp(mountOptions): AppMount {
       const entry = registry.get(mountOptions.id);
       if (!entry) throw invalidRegistry(mountOptions.id, 'unregistered app ID');
@@ -258,6 +361,8 @@ export function createAppRuntime(options: {
       Object.assign(placement.style, { width: '100%', height: '100%', minHeight: '0' });
       mountOptions.target.append(placement);
       const shellState = createShellState(mountOptions.shellState);
+      const definitionStorage = options.storage?.coordinator.forDefinitionInternal(mountOptions.id);
+      const publicStorage = options.storage?.coordinator.forDefinition(mountOptions.id);
       let driver: AppDriver | undefined;
       let disposed = false;
       let retryLoad = false;
@@ -283,12 +388,13 @@ export function createAppRuntime(options: {
           activeAttempt = attempt;
           if (driver) return;
           let definition: unknown;
-          const retry = retryLoad;
+          const retry = retryLoad || failedLoads.has(mountOptions.id);
           // Keep retry enabled until both the descriptor and adapter accept the module.
           retryLoad = true;
           try {
             definition = await sharedLoader.load(entry, attempt.signal, retry);
           } catch (cause) {
+            if (!attempt.signal.aborted) failedLoads.add(mountOptions.id);
             if (isMfeError(cause)) throw cause;
             throw createMfeError({
               id: mountOptions.id,
@@ -303,14 +409,8 @@ export function createAppRuntime(options: {
             });
           }
           if (!attempt.isCurrent()) return;
-          if (
-            typeof definition !== 'object' ||
-            definition === null ||
-            !('kind' in definition) ||
-            definition.kind !== 'app' ||
-            !('id' in definition) ||
-            definition.id !== mountOptions.id
-          ) {
+          if (!isLoadedDefinition(definition, mountOptions.id, 'app')) {
+            failedLoads.add(mountOptions.id);
             throw invalidRegistry(
               mountOptions.id,
               'loaded definition has an incompatible kind or ID',
@@ -325,7 +425,10 @@ export function createAppRuntime(options: {
             ...(mountOptions.createNavigation
               ? { createNavigation: mountOptions.createNavigation }
               : {}),
+            ...(definitionStorage ? { storage: definitionStorage } : {}),
+            ...(publicStorage ? { publicStorage } : {}),
           });
+          failedLoads.delete(mountOptions.id);
           retryLoad = false;
         },
         async mount(attempt) {
@@ -352,6 +455,9 @@ export function createAppRuntime(options: {
           if (disposed) return;
           const attempt = activeAttempt;
           try {
+            if (options.storage?.session) {
+              options.storage.session.update(next);
+            }
             if (driver?.updateShellState) await driver.updateShellState(next);
             else shellState.update(next);
           } catch (cause) {

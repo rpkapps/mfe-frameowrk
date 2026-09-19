@@ -7,7 +7,7 @@ import { createProbeContext, createProbeRouter, readHistoryMethods } from './rou
 
 afterEach(cleanup);
 
-describe('Gate 0: pinned native behavior, not contract acceptance', () => {
+describe('pinned native router behavior, not contract acceptance', () => {
   it('distinguishes default history from explicitly supplied history through options', () => {
     const originalPush = readHistoryMethods().push;
     const originalReplace = readHistoryMethods().replace;

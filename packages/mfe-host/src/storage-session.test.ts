@@ -2,10 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 import { z } from 'zod';
 import { createInternalStorageCoordinator } from '@company/mfe-host/internal';
 import {
+  createShellSession,
   hasStorageSessionChanged,
   transitionStorageSession,
   type StorageSessionMetadata,
 } from './storage-session';
+import { createShellState } from './shell-state';
 
 function memoryStorage(): Storage {
   const values = new Map<string, string>();
@@ -34,6 +36,114 @@ const firstSession: StorageSessionMetadata = {
 };
 
 describe('storage session transitions', () => {
+  it('retires every registered mount once before storage transition and publish', () => {
+    const order: string[] = [];
+    const store = createShellState({
+      user: { id: 'u-1', name: 'One' },
+      groups: ['reader'],
+      theme: 'light',
+    });
+    const coordinator = {
+      transition: vi.fn(() => {
+        order.push('storage');
+        return true;
+      }),
+    };
+    const session = createShellSession({
+      coordinator,
+      createGeneration: () => 'generation-2',
+      initial: store.getSnapshot(),
+      store,
+    });
+    const unregister = session.registerQueryRetirer(() => order.push('retire:first'));
+    session.registerQueryRetirer(() => order.push('retire:second'));
+    store.subscribe(() => order.push('publish'));
+
+    expect(
+      session.update({ user: { id: 'u-2', name: 'Two' }, groups: ['reader'], theme: 'dark' }),
+    ).toBe(true);
+    expect(order).toEqual(['retire:first', 'retire:second', 'storage', 'publish']);
+    expect(coordinator.transition).toHaveBeenCalledOnce();
+    unregister();
+    expect(
+      session.update({ user: { id: 'u-2', name: 'Two' }, groups: ['reader'], theme: 'light' }),
+    ).toBe(true);
+    expect(coordinator.transition).toHaveBeenCalledOnce();
+  });
+
+  it('treats group reordering as a no-op and removes retired callbacks', () => {
+    const retire = vi.fn();
+    const session = createShellSession({
+      coordinator: { transition: vi.fn(() => true) },
+      createGeneration: () => 'generation-2',
+      initial: { user: null, groups: ['reader', 'analyst'], theme: 'light' },
+    });
+    const unregister = session.registerQueryRetirer(retire);
+    expect(session.update({ user: null, groups: ['analyst', 'reader'], theme: 'dark' })).toBe(true);
+    expect(retire).not.toHaveBeenCalled();
+    unregister();
+    expect(
+      session.update({ user: { id: 'u-2', name: 'Two' }, groups: ['reader'], theme: 'dark' }),
+    ).toBe(true);
+    expect(retire).not.toHaveBeenCalled();
+  });
+
+  it('disposes the store and rejects later registrations or updates', () => {
+    const session = createShellSession({
+      coordinator: { transition: vi.fn(() => true) },
+      createGeneration: () => 'generation-2',
+      initial: { user: null, groups: [], theme: 'light' },
+    });
+    session.dispose();
+    expect(() =>
+      session.registerQueryRetirer(() => {
+        throw new Error('must not run');
+      }),
+    ).not.toThrow();
+    expect(session.update({ user: { id: 'late', name: 'Late' }, groups: [], theme: 'dark' })).toBe(
+      false,
+    );
+    expect(session.getSnapshot()).toEqual({ user: null, groups: [], theme: 'light' });
+  });
+
+  it('does not transition or publish when a query retiree fails', () => {
+    const store = createShellState({ user: null, groups: [], theme: 'light' });
+    const transition = vi.fn(() => true);
+    const session = createShellSession({
+      coordinator: { transition },
+      createGeneration: () => 'generation-2',
+      initial: store.getSnapshot(),
+      store,
+    });
+    session.registerQueryRetirer(() => {
+      throw new Error('retirement failed');
+    });
+    expect(() =>
+      session.update({ user: { id: 'u-2', name: 'Two' }, groups: [], theme: 'dark' }),
+    ).toThrow(expect.objectContaining({ code: 'storage/failure' }));
+    expect(transition).not.toHaveBeenCalled();
+    expect(session.getSnapshot()).toEqual({ user: null, groups: [], theme: 'light' });
+  });
+
+  it.each([undefined, null])('fails closed when a retiree throws %s', (cause) => {
+    const store = createShellState({ user: null, groups: [], theme: 'light' });
+    const transition = vi.fn(() => true);
+    const session = createShellSession({
+      coordinator: { transition },
+      createGeneration: () => 'generation-2',
+      initial: store.getSnapshot(),
+      store,
+    });
+    session.registerQueryRetirer(() => {
+      // eslint-disable-next-line @typescript-eslint/only-throw-error -- fail-closed regression covers arbitrary callback throws.
+      throw cause;
+    });
+    expect(() =>
+      session.update({ user: { id: 'u-2', name: 'Two' }, groups: [], theme: 'dark' }),
+    ).toThrow(expect.objectContaining({ code: 'storage/failure' }));
+    expect(transition).not.toHaveBeenCalled();
+    expect(session.getSnapshot().user).toBeNull();
+  });
   it('compares identity fields and groups as a semantic set', () => {
     expect(
       hasStorageSessionChanged(firstSession, {

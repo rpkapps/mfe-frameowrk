@@ -22,17 +22,29 @@ jobs:
         run: pnpm install --frozen-lockfile
       - name: Static checks and behavior tests
         run: pnpm run check
-      - name: Gate 0 contract conformance
-        run: pnpm run gate:0
+      - name: App-adapter contract conformance
+        run: pnpm run test:conformance
       - name: Build the shell and federated test apps
         run: pnpm run build:test-apps
       - name: Install browser for integration tests
         run: pnpm exec playwright install --with-deps chromium
       - name: Browser integration
+        id: browser_integration
         run: pnpm run test:browser
+      - name: Production browser mount-isolation evidence
+        if: ${{ !cancelled() && (success() || steps.browser_integration.outcome == 'failure') }}
+        run: pnpm run test:browser:production
       - uses: actions/upload-artifact@v4
         if: always()
         with:
           name: browser-results
           path: test-results/
+          retention-days: 7
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: production-browser-results
+          path: |
+            test-results-production-browser/
+            playwright-report-production-browser/
           retention-days: 7

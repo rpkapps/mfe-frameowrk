@@ -62,7 +62,7 @@ function QueryView() {
   const providerClient = useQueryClient();
   const result = useQuery(
     queryOptions({
-      queryKey: ['gate-zero'],
+      queryKey: ['app-adapter-contract'],
       queryFn: service.fetch,
       staleTime: Infinity,
     }),
@@ -114,7 +114,7 @@ function setup() {
         loader(context);
         return context.queryClient.ensureQueryData(
           queryOptions({
-            queryKey: ['gate-zero'],
+            queryKey: ['app-adapter-contract'],
             queryFn: context.authorService.fetch,
             staleTime: Infinity,
           }),
@@ -133,7 +133,7 @@ function setup() {
     factoryHistory.push(readHistoryMethods());
     return router;
   });
-  const definition = createApp({ id: 'gate-zero', router: factory });
+  const definition = createApp({ id: 'app-adapter-contract', router: factory });
   const reportError = vi.fn();
   const mount = createTracerMount({
     definitions: new Map([[definition.id, definition]]),
@@ -167,8 +167,8 @@ afterEach(async () => {
 
 // The approved revisions replace the original factory/history and live native
 // match-context promises. These assertions exercise the actual React adapter;
-// the in-process loader and memory boundary do not prove the Gate 1 browser bridge.
-describe('approved Gate 0 contracts', () => {
+// The in-process loader and memory boundary do not prove the browser navigation bridge.
+describe('approved app-adapter contracts', () => {
   it('forwards owned history at construction and mounts without changing global History methods', async () => {
     const fixture = setup();
     const { mount, factory, originalHistory, factoryHistory } = fixture;
@@ -240,7 +240,7 @@ describe('approved Gate 0 contracts', () => {
     expect(mount.getRouter()).toBe(router);
     expect(router?.routeTree).toBe(routeTree);
     expect(mount.queryClient).toBe(client);
-    expect(client.getQueryData(['gate-zero'])).toBe('cached query data');
+    expect(client.getQueryData(['app-adapter-contract'])).toBe('cached query data');
     const current = router?.options.context as TracerContext;
     expect(current.authorService).toBe(authorService);
     expect(current.queryClient).toBe(client);

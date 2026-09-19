@@ -8,6 +8,7 @@ import tseslint from 'typescript-eslint';
 import noGlobalPatching from './rules/no-global-patching.js';
 import noRawStorage from './rules/no-raw-storage.js';
 import stableDefinitions from './rules/stable-definitions.js';
+import noWidgetGlobalEffects from './rules/no-widget-global-effects.js';
 
 const sourceFiles = ['**/*.{js,mjs,cjs,jsx,ts,mts,cts,tsx}'];
 const typescriptFiles = ['**/*.{ts,mts,cts,tsx}'];
@@ -18,6 +19,7 @@ const plugin = {
     'no-global-patching': noGlobalPatching,
     'no-raw-storage': noRawStorage,
     'stable-definitions': stableDefinitions,
+    'no-widget-global-effects': noWidgetGlobalEffects,
   },
   configs: {},
 };
@@ -144,6 +146,18 @@ plugin.configs.author = [
     rules: {
       'mfe/no-raw-storage': 'error',
     },
+  },
+];
+
+// Projects opt into this narrow scope with their own explicit source globs:
+// `...mfe.configs.authorWidget(['src/panels/**'])`. We do not infer Widget
+// ownership from filenames or enable browser-global checks for all authors.
+plugin.configs.authorWidget = (files = []) => [
+  ...plugin.configs.author,
+  {
+    name: 'mfe/widget-global-effects',
+    files,
+    rules: { 'mfe/no-widget-global-effects': 'error' },
   },
 ];
 

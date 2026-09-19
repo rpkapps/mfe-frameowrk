@@ -29,13 +29,13 @@ localStorage.setItem(
 location.reload();
 ```
 
-Use a compatible MF2 App manifest with the same public definition ID. Override servers must allow requests from `http://localhost:4100`. An invalid entry is reported and falls back to that App's checked-in URL. An unreachable valid URL produces a visible error and a working retry. Remove the map and reload to restore defaults. This local mechanism does not implement production registry enrollment, authentication, or the complete later-gate override UI.
+Use a compatible MF2 App manifest with the same public definition ID. Override servers must allow requests from `http://localhost:4100`. An invalid entry is reported and falls back to that App's checked-in URL. An unreachable valid URL produces a visible error and a working retry. Remove the map and reload to restore defaults. This local mechanism does not implement production registry enrollment, authentication, or the complete production override UI.
 
 ## Verification
 
 ```sh
 pnpm check
-pnpm gate:0
+pnpm test:conformance
 pnpm build:test-apps
 pnpm exec playwright install chromium
 pnpm test:browser
@@ -45,7 +45,7 @@ Playwright starts the complete environment when necessary and reuses it locally 
 
 The [Tecton distribution record](tecton-distribution.md) documents the pinned upstream source, private local package, generated declarations, and CSS adaptation. The supplied `tecton-ui-1code` URL returned 404; the source named in the original specification, `tecton-ui-1`, contains the matching shell-01 block and components. No upstream generated component was edited.
 
-This shell uses a fixed test persona and sample project data. It provides a development integration location; authentication and the remaining framework gates are tracked separately in [progress](progress.md).
+This shell uses a fixed test persona and sample project data. It provides a development integration location; authentication and remaining production requirements are tracked separately in [progress](progress.md).
 
 ## Runtime ownership
 

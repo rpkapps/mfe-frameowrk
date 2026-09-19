@@ -8,6 +8,7 @@ export type {
   AppRuntime,
   AppMount,
   AppMountOptions,
+  StorageRuntimeOptions,
 } from './app-runtime';
 export { createShellState } from './shell-state';
 export type { MountAttempt, MountDeadlines } from './mount-lifecycle';
@@ -25,6 +26,15 @@ export type {
   NavigationBlocker,
 } from './boundary-history';
 export { untilAttemptRetires } from './attempt-work';
+export { createWidgetRuntime } from './widget-runtime';
+export type {
+  WidgetRegistration,
+  WidgetAdapterOptions,
+  WidgetDriver,
+  WidgetMountOptions,
+  WidgetMount,
+  WidgetRuntime,
+} from './widget-runtime';
 export { normalizeRegistry, selectAdapter } from './registry';
 export type {
   AdvertisedDescriptor,
@@ -38,3 +48,12 @@ export type {
   StorageCoordinatorOptions,
   StorageEventLike,
 } from './storage';
+
+export { createShellSession, createStorageSession } from './storage-session';
+export type {
+  ShellSessionBoundary,
+  ShellSessionOptions,
+  StorageSessionBoundary,
+  StorageSessionMetadata,
+  StorageSessionTransitionOptions,
+} from './storage-session';

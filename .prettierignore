@@ -5,6 +5,8 @@ node_modules/
 **/routeTree.gen.ts
 **/playwright-report/
 **/test-results/
+**/test-results-production-browser/
+**/playwright-report-production-browser/
 pnpm-lock.yaml
 docs/mfe-framework-spec.md
 vendor/tecton-react/src/

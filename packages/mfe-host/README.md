@@ -1,9 +1,11 @@
 # Neutral mount ownership
 
 `@company/mfe-core` defines the public identity, error and lifecycle records.
-`@company/mfe-host/internal` supplies `createMountLifecycle` to framework adapters.
-The root host entry does not expose a loader, adapter registration, or generic
-author mounting API. Both packages remain independent of React and routers.
+The public host entry builds neutral App and Widget runtimes, registries,
+storage coordinators, and browser navigation; `@company/mfe-host/internal`
+supplies `createMountLifecycle` to framework adapters. The host remains
+independent of React and routers, while adapters provide framework-specific
+mount drivers through runtime configuration.
 
 An adapter creates one lifecycle owner for a placement, calls `start()` once, and
 observes its handle. `start()` and `retry()` reject with the same structured error
@@ -32,6 +34,7 @@ mount code that may ignore cancellation. Adapter code therefore must use the
 commit fence after awaits. A late resource registered after disposal has already
 settled is released and any failure is reported through diagnostics.
 
-Gate 0 implements ownership and attempt fencing only. Finite load/mount/disposal
-deadlines and shared-load ownership belong to Gate 2. These neutral unit tests do
-not establish that the React router contract or any implementation gate passes.
+The current host surface implements ownership and attempt fencing. Finite
+load/mount/disposal deadlines and shared-load ownership are separate host
+responsibilities. These neutral unit tests do not establish the React router
+contract or browser integration behavior.

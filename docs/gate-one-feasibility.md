@@ -64,7 +64,7 @@ reload fallback, preserving the URL and shell theme; this path makes no Fast Ref
 The bounded Rsbuild proof passes for a production Discovery remote. The test creates a temporary output directory and exercises the real `mfePlugin` configuration, so it checks emitted artifacts rather than only plugin options:
 
 ```sh
-pnpm exec vitest run packages/mfe-rsbuild/src/gate-one-build-proof.test.mjs
+pnpm exec vitest run packages/mfe-rsbuild/src/production-build.test.mjs
 ```
 
 Observed environment: Node `v24.19.0`, pnpm `11.19.0`. The run passed one test in 10.18s (13s wall time); Rsbuild reported a 6.56s production build. The proof checks the sharing configuration and strict-version declarations for React, JSX runtimes, `react/compiler-runtime`, `react-dom/client`, the shell-state context, and the scoped `@tecton/react/` package. These declarations and configuration do not by themselves prove runtime singleton identity; that remains an emitted and browser-consumer concern. It then checks that emitted JavaScript contains the compiler runtime, source maps retain local route/component, `@company/mfe-react`, and installed Tecton source locations, and that lazy route sources are present. Lazy source presence is not proof of lazy execution. The emitted packaged CSS contains a native `@scope` boundary for `discovery`, namespaced Tailwind registrations, and no remaining imports.

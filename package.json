@@ -16,7 +16,7 @@
     "check:build-policy": "node scripts/check-build-policy.mjs",
     "test": "node scripts/generate.mjs && vitest run",
     "test:watch": "node scripts/generate.mjs && vitest",
-    "gate:0": "vitest run --config vitest.gate.config.ts",
+    "test:conformance": "vitest run --config vitest.conformance.config.ts",
     "check": "node scripts/check.mjs",
     "dev": "node scripts/dev.mjs",
     "dev:shell": "node scripts/dev.mjs shell",
@@ -24,7 +24,8 @@
     "dev:discovery": "node scripts/dev.mjs discovery",
     "dev:geology": "node scripts/dev.mjs geology",
     "build:test-apps": "node scripts/build-test-apps.mjs",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "test:browser:production": "playwright test --config playwright.production.config.ts"
   },
   "devDependencies": {
     "@babel/core": "7.29.7",
@@ -64,6 +65,7 @@
     "react-dom": "19.3.0",
     "tailwindcss": "4.3.3",
     "typescript": "5.9.3",
-    "vitest": "5.0.1"
+    "vitest": "5.0.1",
+    "zod": "4.6.5"
   }
 }

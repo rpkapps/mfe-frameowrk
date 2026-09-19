@@ -8,6 +8,12 @@ import {
 } from '@tanstack/react-router';
 import type { RouterHistory } from '@tanstack/history';
 import type { MfeRouterContext } from '@company/mfe-react';
+import { createStorageCoordinator } from '@company/mfe-host';
+
+// Characterization routers need the same concrete public storage shape as a
+// mounted App. The fixture owns one explicit coordinator for its probe handles;
+// production shells supply their shared coordinator at the host boundary.
+const probeStorage = createStorageCoordinator({ generation: 'router-probe' });
 
 export function createProbeContext(theme: 'light' | 'dark' = 'light'): MfeRouterContext {
   return {
@@ -16,6 +22,7 @@ export function createProbeContext(theme: 'light' | 'dark' = 'light'): MfeRouter
       groups: ['readers'],
       theme,
       signal: new AbortController().signal,
+      storage: probeStorage.forDefinition('router-probe'),
     },
     queryClient: new QueryClient(),
   };

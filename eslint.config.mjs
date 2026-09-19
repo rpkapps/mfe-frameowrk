@@ -22,6 +22,11 @@ export default [
     })),
   ),
   {
+    name: 'workspace/widget-scaling-host-assembly',
+    files: ['fixtures/test-shell/src/widget-storage-scaling.tsx'],
+    rules: { 'mfe/no-widget-global-effects': 'error' },
+  },
+  {
     name: 'workspace/node-tooling',
     files: [
       '**/*.mjs',

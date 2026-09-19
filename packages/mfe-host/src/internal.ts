@@ -12,6 +12,7 @@ export type {
 } from './mount-lifecycle';
 export { createInternalStorageCoordinator } from './storage';
 export type {
+  MfeDefinitionStorage,
   InternalMfeDefinitionStorage,
   InternalMfeStorage,
   InternalMfeStorageKey,

@@ -2,7 +2,7 @@
 
 Use the exact Node version in `.node-version` and the latest stable pnpm. Install pnpm with `npx get-pnpm` or update it with `pnpm self-update`, then install dependencies with `pnpm install --frozen-lockfile`. CI installs `latest`; keep pnpm unpinned in the repository. Dependency installation scripts run only under the reviewed `allowBuilds` policy; inspect the package, resolved version, script, and reason before changing that policy. Never approve a batch of unknown scripts to make an install pass.
 
-Run `pnpm run generate` to recover generated files, `pnpm run format` to format authored files, and `pnpm run check` before review. The check generates prerequisites, checks formatting, lints, typechecks, checks package boundaries, and runs behavior tests. `pnpm run gate:0` separately evaluates the contract's feasibility requirements; passing unit tests does not mean the implementation gate passed. CI performs read-only checks after generation and never formats authored code automatically.
+Run `pnpm run generate` to recover generated files, `pnpm run format` to format authored files, and `pnpm run check` before review. The check generates prerequisites, checks formatting, lints, typechecks, checks package boundaries, and runs behavior tests. `pnpm run test:conformance` separately evaluates the app-adapter contract; passing unit tests does not establish browser or production integration behavior. CI performs read-only checks after generation and never formats authored code automatically.
 
 Prettier owns formatting. Use lowercase kebab-case filenames for framework modules, named exports for public framework APIs, and explicit package export maps. Follow native TanStack route filenames in App fixtures. Keep imports grouped as Node built-ins, external packages, then local modules; use explicit `import type` for type-only dependencies. Avoid barrel files inside implementations when they hide dependencies or create cycles. `.editorconfig` and `prettier.config.mjs` are the editor/CI source of truth.
 
@@ -14,6 +14,11 @@ Tests use behavior-oriented names and visible arrange/act/assert steps. Use Vite
 
 The ESLint plugin covers the shared baseline, strict typed rules, React/TanStack foundations, import boundaries, global patch prevention, definition stability, and author raw-storage prevention. The explicitly scoped Widget checks arrive with Widget mounting. Suppressions name one rule and explain the local limitation; blanket package disables are not accepted. Dynamic behavior, cleanup, and render isolation still require runtime tests and review.
 
-Every gate needs a readability review covering naming, module responsibilities, state transitions, error paths, ownership, cancellation, and cleanup. Performance shortcuts require measured evidence and a focused invariant test. Do not implement later surfaces while an earlier feasibility gate remains unresolved. Record decisions and evidence in the concise progress record; do not mark a gate complete based on scaffolding or skipped tests.
+Every behavior surface needs a readability review covering naming, module responsibilities, state transitions, error paths, ownership, cancellation, and cleanup. Performance shortcuts require measured evidence and a focused invariant test. Do not start dependent feature surfaces while a prerequisite acceptance requirement remains unresolved. Record decisions and evidence in the concise progress record; do not treat scaffolding or skipped tests as evidence.
+
+Name maintained code after its behavior or domain (for example, `mount-isolation`
+or `widget-storage-scaling`). Numeric milestone names belong only in historical
+planning, evidence, or architectural approval records; they must not become
+module names, commands, selectors, artifact names, or runtime identifiers.
 
 Generated files are deterministic and formatted by their generator. Never repair them by hand. Regeneration must be repeatable, and route trees stay untracked. Publish and deployment actions require separate authorization; this CI workflow only verifies changes.

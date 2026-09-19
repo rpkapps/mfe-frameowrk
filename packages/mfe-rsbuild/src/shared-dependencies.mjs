@@ -39,6 +39,20 @@ export function sharedDependencies() {
     requiredVersion: versions['@company/mfe-react'],
     packageName: '@company/mfe-react',
   };
+  // These contexts are instantiated by the host and consumed by every App or
+  // Widget mount. Sharing the exact modules is required for React context
+  // identity to survive the MF2 boundary.
+  for (const subpath of [
+    '@company/mfe-react/internal/mount-services-context',
+    '@company/mfe-react/internal/host-context',
+  ]) {
+    shared[subpath] = {
+      singleton: true,
+      strictVersion: true,
+      requiredVersion: versions['@company/mfe-react'],
+      packageName: '@company/mfe-react',
+    };
+  }
   // A trailing slash includes the component and provider subpath exports.
   shared['@tecton/react/'] = {
     singleton: true,

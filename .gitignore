@@ -3,9 +3,10 @@ dist/
 coverage/
 test-results/
 playwright-report/
+playwright-report-production-browser/
+test-results-production-browser/
 *.tsbuildinfo
 routeTree.gen.ts
 .env.local
-.gate-results/
 docs/handoff.md
 **/.mfe/
