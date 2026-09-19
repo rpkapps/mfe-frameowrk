@@ -3,6 +3,8 @@ dist/
 coverage/
 test-results/
 playwright-report/
+playwright-report-gate-three-production/
+test-results-gate-three-production/
 *.tsbuildinfo
 routeTree.gen.ts
 .env.local

@@ -473,4 +473,25 @@ describe('framework-neutral app runtime', () => {
     expect(invalid.created).toHaveLength(0);
     await mount.handle.dispose();
   });
+
+  it('preloads a validated App without placement, adapter, or lifecycle activation', async () => {
+    const load = vi.fn<AppRegistration['load']>(() =>
+      Promise.resolve({ kind: 'app', id: 'plain' }),
+    );
+    const create = vi.fn(() => ({ mount: vi.fn() }));
+    const runtime = createAppRuntime({
+      registry: [{ id: 'plain', kind: 'app', contractMajor: 1, adapter: 'dom', load }],
+      adapters: [{ id: 'dom', create }],
+      reportError: vi.fn(),
+    });
+    const target = document.createElement('main');
+    await expect(
+      runtime.preloadApp({ id: 'plain', signal: new AbortController().signal }),
+    ).resolves.toMatchObject({
+      kind: 'app',
+      id: 'plain',
+    });
+    expect(create).not.toHaveBeenCalled();
+    expect(target.childElementCount).toBe(0);
+  });
 });

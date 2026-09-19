@@ -22,6 +22,11 @@ export default [
     })),
   ),
   {
+    name: 'workspace/gate-three-host-assembly',
+    files: ['fixtures/test-shell/src/gate-three-scale.tsx'],
+    rules: { 'mfe/no-widget-global-effects': 'error' },
+  },
+  {
     name: 'workspace/node-tooling',
     files: [
       '**/*.mjs',

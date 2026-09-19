@@ -10,11 +10,19 @@ import { MFE_CONTRACT_MAJOR } from '@company/mfe-core';
 import type { MfeError, ShellState } from '@company/mfe-core';
 import { createAppRuntime, untilAttemptRetires } from '@company/mfe-host';
 import type { AppAdapterOptions, AppDriver, MountAttempt } from '@company/mfe-host';
+import type { InternalStorageCoordinator } from '@company/mfe-host/internal';
 import type { AppDefinition } from './index';
 import type { MfeRouterContext } from './router-context';
 import { createContextValidator, invalidRouter } from './reserved-context';
 import { createNavigationHistory } from './navigation-history';
 import { ShellStateProvider } from '@company/mfe-react/internal/shell-state-context';
+import { MountServicesProvider } from '@company/mfe-react/internal/mount-services-context';
+import type { MfeMountServices } from '@company/mfe-react/internal/mount-services-context';
+import { MfeHostProvider } from '@company/mfe-react/internal/host-context';
+import { MFE_HOST_CONTEXT } from '@company/mfe-react/internal/host-context';
+import { MFE_APP_BASE_PATH } from '@company/mfe-react/internal/host-context';
+import type { MfeHostEnvironment } from '@company/mfe-react/internal/host-context';
+import { retireQueryClientNow } from './query-session';
 
 class MountErrorBoundary extends Component<
   PropsWithChildren<{ readonly onError: (cause: unknown) => void }>,
@@ -40,6 +48,8 @@ interface AppMountOptions {
   /** The bridge supplies a fresh owned history for every mount attempt. */
   readonly createHistory: () => RouterHistory;
   readonly reportError: (error: MfeError) => void;
+  /** Test-owned coordinator; production mounts receive one from the shell runtime. */
+  readonly storage: InternalStorageCoordinator;
 }
 
 /** React resources only; the host owns lifecycle, placement and shell state. */
@@ -47,6 +57,7 @@ export function createReactDriver(
   options: AppAdapterOptions,
   createHistory?: () => RouterHistory,
   queryClient = new QueryClient(),
+  environment?: MfeHostEnvironment,
 ) {
   const candidate = options.definition;
   if (
@@ -59,6 +70,10 @@ export function createReactDriver(
   }
   // The host validates common descriptor fields before selecting this adapter.
   const definition = candidate as AppDefinition<AnyRouter>;
+  const storage = options.storage;
+  const publicStorage = options.publicStorage;
+  if (storage === undefined || publicStorage === undefined)
+    throw new Error(`React App ${options.id} requires host storage services.`);
   const { placement, shellState } = options;
   let activeRouter: AnyRouter | undefined;
   let activeAttemptSignal: AbortSignal | undefined;
@@ -67,6 +82,7 @@ export function createReactDriver(
   let rootCount = 0;
   let sessionGeneration = 0;
   let disposed = false;
+  let unregisterQueryRetirer: (() => void) | undefined;
 
   const driver = {
     detach() {
@@ -74,6 +90,8 @@ export function createReactDriver(
       sessionGeneration++;
     },
     async dispose() {
+      unregisterQueryRetirer?.();
+      unregisterQueryRetirer = undefined;
       await queryClient.cancelQueries();
       queryClient.clear();
     },
@@ -91,12 +109,44 @@ export function createReactDriver(
         await queryClient.cancelQueries();
         queryClient.clear();
       });
-      const context: MfeRouterContext = Object.freeze({
-        mfe: Object.freeze({ ...shellState.getSnapshot(), signal: attempt.mountSignal }),
+      const routeHost = environment
+        ? Object.freeze({
+            preloadApp: (preload: { readonly id: string; readonly signal: AbortSignal }) =>
+              environment.runtime.preloadApp(preload),
+          })
+        : undefined;
+      const context = Object.freeze({
+        ...(routeHost === undefined ? {} : { [MFE_HOST_CONTEXT]: routeHost }),
+        [MFE_APP_BASE_PATH]: options.basePath,
+        mfe: Object.freeze({
+          ...shellState.getSnapshot(),
+          signal: attempt.mountSignal,
+          storage: publicStorage,
+        }),
         queryClient,
       });
-      const validator = createContextValidator(definition, context);
-      const router = definition.router({ basePath: options.basePath, context, history });
+      const services: MfeMountServices = {
+        id: options.id,
+        kind: 'app',
+        storage: publicStorage,
+        internalStorage: storage,
+        signal: attempt.mountSignal,
+        basePath: options.basePath,
+      };
+      if (environment !== undefined && unregisterQueryRetirer === undefined) {
+        unregisterQueryRetirer = environment.session.registerQueryRetirer(() => {
+          void retireQueryClientNow(queryClient).catch((cause: unknown) => {
+            failActiveAttempt?.(cause);
+          });
+        });
+      }
+      const routerContext = context as MfeRouterContext;
+      const validator = createContextValidator(definition, routerContext);
+      const router = definition.router({
+        basePath: options.basePath,
+        context: routerContext,
+        history,
+      });
       if (router.options.history !== history || router.history !== history) {
         if (router.options.history === undefined) {
           // Release a nonconforming factory's native default history before
@@ -133,8 +183,14 @@ export function createReactDriver(
       });
       attempt.onDetach(
         shellState.subscribe(() => {
-          const next: MfeRouterContext = Object.freeze({
-            mfe: Object.freeze({ ...shellState.getSnapshot(), signal: attempt.mountSignal }),
+          const next = Object.freeze({
+            ...(routeHost === undefined ? {} : { [MFE_HOST_CONTEXT]: routeHost }),
+            [MFE_APP_BASE_PATH]: options.basePath,
+            mfe: Object.freeze({
+              ...shellState.getSnapshot(),
+              signal: attempt.mountSignal,
+              storage: publicStorage,
+            }),
             queryClient,
           });
           validator.register(next);
@@ -195,7 +251,15 @@ export function createReactDriver(
             <MountErrorBoundary onError={attempt.fail}>
               <ShellStateProvider store={shellState}>
                 <QueryClientProvider client={queryClient}>
-                  <RouterProvider router={router} />
+                  <MountServicesProvider services={services}>
+                    {environment ? (
+                      <MfeHostProvider value={environment}>
+                        <RouterProvider router={router} />
+                      </MfeHostProvider>
+                    ) : (
+                      <RouterProvider router={router} />
+                    )}
+                  </MountServicesProvider>
                 </QueryClientProvider>
               </ShellStateProvider>
             </MountErrorBoundary>,
@@ -236,14 +300,8 @@ export function createReactDriver(
     // still acknowledges navigation while the owned container is hidden.
     if (element) element.hidden = true;
     try {
-      const cancellation = queryClient.cancelQueries();
-      // Removing an observed Query leaves its observer holding the old result
-      // until another render. Query.reset is the public per-query primitive used
-      // by resetQueries; unlike that client helper, it does not refetch before
-      // shell subscribers have committed their new query keys and callbacks.
-      for (const query of queryClient.getQueryCache().getAll()) query.reset();
-      queryClient.removeQueries({ predicate: (query) => query.getObserversCount() === 0 });
-      queryClient.getMutationCache().clear();
+      const cancellation =
+        environment === undefined ? retireQueryClientNow(queryClient) : Promise.resolve();
       // Authorization transitions are synchronous. Query-only observers were
       // reset above; keyed consumers now commit their current session options.
       flushSync(() => shellState.update(next));
@@ -310,6 +368,13 @@ export function createAppMount(options: AppMountOptions) {
       },
     ],
     reportError: options.reportError,
+    storage: {
+      coordinator: options.storage,
+      createGeneration: (() => {
+        let sequence = 0;
+        return () => `test-generation:${++sequence}`;
+      })(),
+    },
   });
   const mount = runtime.mountApp({
     id: options.definition.id,

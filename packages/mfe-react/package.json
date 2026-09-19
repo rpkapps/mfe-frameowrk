@@ -5,8 +5,11 @@
   "type": "module",
   "exports": {
     ".": "./src/index.ts",
+    "./testing": "./src/testing.tsx",
     "./internal": "./src/internal.ts",
-    "./internal/shell-state-context": "./src/shell-state-context.tsx"
+    "./internal/shell-state-context": "./src/shell-state-context.tsx",
+    "./internal/mount-services-context": "./src/mount-services-context.tsx",
+    "./internal/host-context": "./src/host-context.tsx"
   },
   "dependencies": {
     "@company/mfe-core": "workspace:*",

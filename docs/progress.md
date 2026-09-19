@@ -1,5 +1,26 @@
 # Implementation progress
 
+## Gate 3 implementation; acceptance remains open — 2026-09-19
+
+- Started `feat/gate3-public-facade` from merged remote `main` at `95f2d66`.
+  PR #4 is merged; its reviewed Gate 2 head `b29c324` passed
+  [CI run 35404679040](https://github.com/rpkapps/mfe-frameowrk/actions/runs/35404679040).
+- Gate 3 covers the public React facade, Widgets, nested Apps, shared mount
+  services, and test-only utilities. Commands/breadcrumbs remain Gate 4;
+  tracing and telemetry-provider APIs remain deferred.
+- Implemented `lazyWidget`, `mfeRoute`, the specified `AppHost` props, mount-owned
+  services and Query lifecycle, reactive storage hooks, independent Widgets,
+  nested App boundaries, and the supported test-only entry and alias fixtures.
+- Luna implemented; Terra reviewed architecture and readability; parent integration
+  review corrected API leakage and nested-boundary edge cases. Full local `check`
+  passed **333 tests**, static checks, and dependency controls. Both Gate 0 tests
+  and all three production builds passed.
+- Added a production browser runner and CI step for the two-App, 50-Widget,
+  100-key isolation fixture. Local Chromium is unavailable; fresh browser results,
+  agreed performance budgets/baseline, and observed developer tasks remain open.
+  No Gate 3 exit or authenticated-shell result is claimed.
+  See [Gate 3 validation](gate-three-validation.md) for compiler and API limits.
+
 ## Gate 2 storage simplification — 2026-09-18
 
 - Shared remove/clear logic and replaced flag-controlled handle selection with

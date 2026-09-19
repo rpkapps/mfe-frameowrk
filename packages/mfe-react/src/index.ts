@@ -6,6 +6,12 @@ import type { MfeRouterContext } from './router-context';
 
 export type { MfeRouterContext } from './router-context';
 export { useUser, useGroups, useTheme } from '@company/mfe-react/internal/shell-state-context';
+export {
+  useMfeStorage,
+  useStoredState,
+  useMfeSignal,
+  useBasePath,
+} from '@company/mfe-react/internal/mount-services-context';
 
 /** Native bootstrap options supplied for one mount; forward all three unchanged. */
 export interface AppRouterOptions {
@@ -38,5 +44,12 @@ export function createApp<TRouter extends AnyRouter>(
   return Object.freeze({ ...options, kind: 'app' });
 }
 
-export { AppHost, createReactAdapter } from './app-host';
+export { AppHost } from './app-host';
+export { mfeRoute } from './mfe-route';
+export type { MfeRouteOptions } from './mfe-route';
 export type { AppHostProps } from './app-host';
+
+export { createWidget } from './widget-definition';
+export type { WidgetDefinition, WidgetRenderProps } from './widget-definition';
+export { lazyWidget } from './lazy-widget';
+export type { LazyWidgetProps } from './lazy-widget';

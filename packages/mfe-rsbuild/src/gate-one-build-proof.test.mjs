@@ -30,6 +30,8 @@ it('builds a bounded remote with compiled and explicitly excluded adapter consum
     'react/compiler-runtime',
     'react-dom/client',
     '@company/mfe-react/internal/shell-state-context',
+    '@company/mfe-react/internal/mount-services-context',
+    '@company/mfe-react/internal/host-context',
     '@tecton/react/',
   ]) {
     expect(shared[name], name).toMatchObject({ singleton: true, strictVersion: true });

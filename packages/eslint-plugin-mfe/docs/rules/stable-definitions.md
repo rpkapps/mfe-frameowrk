@@ -2,7 +2,7 @@
 
 Declare framework definitions and lazy components once at module scope so React rendering cannot recreate their identities.
 
-The rule recognizes `createApp`, `createWidget`, and `lazyWidget` imported from `@company/mfe-react`, including import aliases, namespace imports, stable local aliases, and TypeScript wrappers. An unrelated function with the same name is allowed. Gate 0 implements only App runtime authoring; recognizing the other factory names is forward-compatible static analysis.
+The rule recognizes `createApp`, `createWidget`, and `lazyWidget` imported from `@company/mfe-react`, including import aliases, namespace imports, stable local aliases, and TypeScript wrappers. An unrelated function with the same name is allowed. Definitions and lazy components must be created at module scope so their identity remains stable across renders.
 
 Invalid:
 

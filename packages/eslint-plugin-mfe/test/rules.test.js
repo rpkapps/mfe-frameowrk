@@ -4,6 +4,7 @@ import tseslint from 'typescript-eslint';
 import noGlobalPatching from '../src/rules/no-global-patching.js';
 import noRawStorage from '../src/rules/no-raw-storage.js';
 import stableDefinitions from '../src/rules/stable-definitions.js';
+import noWidgetGlobalEffects from '../src/rules/no-widget-global-effects.js';
 
 RuleTester.describe = describe;
 RuleTester.it = it;
@@ -123,4 +124,24 @@ tester.run('no-raw-storage', noRawStorage, {
     'const { getItem } = localStorage; getItem("key");',
     '({ localStorage: storage } = window); storage.getItem("key");',
   ].map((code) => ({ code, errors: [{ messageId: 'storage' }] })),
+});
+
+tester.run('no-widget-global-effects', noWidgetGlobalEffects, {
+  valid: [
+    'navigate("/next");',
+    'const document = { title: "owned" }; document.title = "ok";',
+    'window.addEventListener("popstate", listener);',
+    'const local = { pushState() {} }; local.pushState();',
+  ],
+  invalid: [
+    'history.pushState({}, "", "/next");',
+    'window.history.replaceState({}, "", "/next");',
+    'document.title = "Widget";',
+    'document.head.appendChild(link);',
+  ].map((code) => ({
+    code,
+    errors: [
+      { messageId: code.includes('title') || code.includes('head') ? 'metadata' : 'navigation' },
+    ],
+  })),
 });

@@ -12,15 +12,16 @@ Use `mfe.configs.framework` in implementation packages. Both presets include ESL
 
 The framework preset restricts general state-library imports and telemetry vendors. The author preset allows MFE-owned Zustand and restricts framework internals and telemetry vendors. The workspace separately checks the actual package import DAG and public export paths, including type imports, dynamic literal imports, and manifest runtime dependencies.
 
-| Rule                                                   | Default | Scope                       |
-| ------------------------------------------------------ | ------- | --------------------------- |
-| [no-global-patching](docs/rules/no-global-patching.md) | Error   | Framework and author source |
-| [no-raw-storage](docs/rules/no-raw-storage.md)         | Error   | Author source               |
-| [stable-definitions](docs/rules/stable-definitions.md) | Warning | Author source               |
+| Rule                                                               | Default | Scope                         |
+| ------------------------------------------------------------------ | ------- | ----------------------------- |
+| [no-global-patching](docs/rules/no-global-patching.md)             | Error   | Framework and author source   |
+| [no-raw-storage](docs/rules/no-raw-storage.md)                     | Error   | Author source                 |
+| [stable-definitions](docs/rules/stable-definitions.md)             | Warning | Author source                 |
+| [no-widget-global-effects](docs/rules/no-widget-global-effects.md) | Error   | Explicit Widget source scopes |
 
 `stable-definitions` starts as a warning until representative author fixtures establish acceptable false positives. Correctness rules fail CI. Compiler `unsupported-syntax` and `incompatible-library` findings are warnings because they describe skipped optimization; assess them against performance requirements. Other React compiler correctness diagnostics retain the upstream recommended severity. Upgrades require reviewing changed recommendations and rerunning the fixtures.
 
-`no-raw-storage` ships in the author preset with the storage API. The documented shell override bootstrap and framework storage adapter remain outside that preset's file scope. `no-widget-global-effects` is a later Widget gate and must accept explicit source scopes in the author configuration; never infer Widget ownership from filenames. Recognizing a future definition factory name in a static identity rule does not provide that runtime API.
+`no-raw-storage` ships in the author preset with the storage API. The documented shell override bootstrap and framework storage adapter remain outside that preset's file scope. `no-widget-global-effects` is available through `mfe.configs.authorWidget(files)`, where `files` is an explicit project-owned glob; ownership is never inferred from filenames. Recognizing a future definition factory name in a static identity rule does not provide that runtime API.
 
 No rule rewrites source automatically. Moving definitions or changing global side effects requires a deliberate ownership decision. Dynamic property names and aliases reassigned after initialization are outside static coverage; behavior tests remain necessary.
 

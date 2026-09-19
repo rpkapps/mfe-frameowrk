@@ -27,6 +27,14 @@ const statePackages = new Set([
   '@tanstack/store',
   '@tanstack/react-store',
 ]);
+// The shell is the sole integration owner for these explicit adapter seams;
+// author remotes still use only package-root exports.
+const shellInternalExports = new Set([
+  '@company/mfe-host/internal',
+  '@company/mfe-react/internal',
+  '@company/mfe-react/internal/host-context',
+  '@company/mfe-react/internal/mount-services-context',
+]);
 const ignoredDirectories = new Set([
   'node_modules',
   '.git',
@@ -34,7 +42,9 @@ const ignoredDirectories = new Set([
   'dist',
   'coverage',
   'test-results',
+  'test-results-gate-three-production',
   'playwright-report',
+  'playwright-report-gate-three-production',
 ]);
 
 function packageName(specifier) {
@@ -189,7 +199,7 @@ export async function checkBoundaries(root) {
       }
       if (
         owner.name === '@company/fixture-test-shell' &&
-        (specifier.includes('/internal') ||
+        ((!shellInternalExports.has(specifier) && specifier.includes('/internal')) ||
           targetName.startsWith('@module-federation/') ||
           targetName.startsWith('@tanstack/'))
       ) {
