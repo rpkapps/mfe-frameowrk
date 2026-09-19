@@ -249,6 +249,10 @@ test('isolates two real MF2 mounts of one generated App and disposes one indepen
     'Loaded for second-mount',
   );
 
+  await page.getByRole('button', { name: 'Switch to light theme', exact: true }).click();
+  await expect(first.getByTestId('discovery-session')).toHaveText('First mount · Light theme');
+  await expect(second.getByTestId('discovery-session')).toHaveText('Second mount · Light theme');
+
   await second.getByRole('link', { name: 'Framing', exact: true }).click();
   await expect(page).toHaveURL(/\/discovery\/project\/framing\?dual=1$/);
   await expect(

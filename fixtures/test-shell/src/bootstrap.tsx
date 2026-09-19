@@ -17,6 +17,7 @@ import { registry, overrideWarnings, remotes } from './registry';
 import { TestShell, AppFailure } from './shell';
 import { createWidgetScalingRuntime, WidgetScalingGrid } from './widget-storage-scaling';
 import { scalingWidgetIds } from './widget-storage-scaling';
+import { createDualMountEnvironment, type DualMountEnvironment } from './dual-mount-environment';
 import './global.css';
 
 const navigation = createBrowserNavigation(window);
@@ -39,6 +40,34 @@ const session = createShellSession({
 });
 const widgetFixture = createWidgetScalingRuntime(shellState, storage, session);
 const widgetRuntime = widgetFixture.runtime;
+let dualEnvironments:
+  { readonly first: DualMountEnvironment; readonly second: DualMountEnvironment } | undefined;
+function getDualEnvironments(theme: 'dark' | 'light') {
+  if (dualEnvironments !== undefined) return dualEnvironments;
+  dualEnvironments = {
+    first: createDualMountEnvironment({
+      mountId: 'first',
+      user: { id: 'first-mount', name: 'First mount' },
+      groups,
+      theme,
+      createNavigation: (path) => navigation.createBoundaryHistory(path),
+    }),
+    second: createDualMountEnvironment({
+      mountId: 'second',
+      user: { id: 'second-mount', name: 'Second mount' },
+      groups,
+      theme,
+      createNavigation: (path) => navigation.createBoundaryHistory(path),
+    }),
+  };
+  return dualEnvironments;
+}
+function disposeDualEnvironments() {
+  const current = dualEnvironments;
+  dualEnvironments = undefined;
+  current?.first.dispose();
+  current?.second.dispose();
+}
 const hostEnvironment: MfeHostEnvironment = {
   get runtime() {
     return runtime;
@@ -68,8 +97,27 @@ function readTheme(): 'dark' | 'light' {
   }
 }
 
-function DualDiscovery() {
+function IsolatedDiscoveryMount({
+  environment,
+  basePath,
+}: {
+  readonly environment: DualMountEnvironment;
+  readonly basePath: string;
+}) {
+  return (
+    <MfeHostProvider value={environment.host}>
+      <AppHost appId="discovery" basePath={basePath} className="min-h-0 w-full flex-1" />
+    </MfeHostProvider>
+  );
+}
+
+function DualDiscovery({ theme }: { readonly theme: 'dark' | 'light' }) {
   const [firstVisible, setFirstVisible] = useState(true);
+  const environments = getDualEnvironments(theme);
+  useEffect(() => {
+    environments.first.updateTheme(theme);
+    environments.second.updateTheme(theme);
+  }, [environments, theme]);
   return (
     <div data-testid="dual-discovery" className="grid min-h-0 flex-1 gap-3 p-3 md:grid-cols-2">
       <div data-testid="dual-first" className="flex min-h-0 min-w-0 flex-col rounded border">
@@ -82,7 +130,7 @@ function DualDiscovery() {
           )}
         </div>
         {firstVisible && (
-          <AppHost appId="discovery" basePath="/discovery" className="min-h-0 w-full flex-1" />
+          <IsolatedDiscoveryMount environment={environments.first} basePath="/discovery" />
         )}
       </div>
       <div data-testid="dual-second" className="flex min-h-0 min-w-0 flex-col rounded border">
@@ -99,11 +147,7 @@ function DualDiscovery() {
             Exit nested boundary
           </Button>
         </div>
-        <AppHost
-          appId="discovery"
-          basePath="/discovery/project"
-          className="min-h-0 w-full flex-1"
-        />
+        <IsolatedDiscoveryMount environment={environments.second} basePath="/discovery/project" />
       </div>
     </div>
   );
@@ -134,7 +178,6 @@ function ShellApplication() {
       /* Storage is optional. */
     }
   }, [theme]);
-
   return (
     <TestShell
       appId={appId}
@@ -151,13 +194,13 @@ function ShellApplication() {
       )}
       {scaleRoute ? (
         <div className="grid min-h-0 flex-1 gap-3 p-3">
-          <DualDiscovery />
+          <DualDiscovery theme={theme} />
           <Suspense fallback={<div role="status">Loading scale Widgets…</div>}>
             <WidgetScalingGrid />
           </Suspense>
         </div>
       ) : dualDiscovery ? (
-        <DualDiscovery />
+        <DualDiscovery theme={theme} />
       ) : (
         <Suspense
           fallback={
@@ -199,6 +242,7 @@ root.render(
 watchRemoteUpdates(remotes, window);
 window.addEventListener('pagehide', (event) => {
   if (!event.persisted) {
+    disposeDualEnvironments();
     widgetFixture.dispose();
     session.dispose();
     navigation.dispose();

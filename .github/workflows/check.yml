@@ -29,8 +29,10 @@ jobs:
       - name: Install browser for integration tests
         run: pnpm exec playwright install --with-deps chromium
       - name: Browser integration
+        id: browser_integration
         run: pnpm run test:browser
       - name: Production browser mount-isolation evidence
+        if: ${{ !cancelled() && (success() || steps.browser_integration.outcome == 'failure') }}
         run: pnpm run test:browser:production
       - uses: actions/upload-artifact@v4
         if: always()
