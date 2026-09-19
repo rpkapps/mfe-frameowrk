@@ -38,12 +38,12 @@ the dedicated tracing-contract work; they are not silently counted as passed.
 - Full `pnpm run check` passed: generation, Tecton artifact integrity, formatting,
   lint, all TypeScript projects, package boundaries, **333 tests in 36 files**, and
   dependency-build approval controls.
-- `pnpm run gate:0`: both architectural integration tests passed.
+- `pnpm run test:conformance`: both architectural integration tests passed.
 - `pnpm run build:test-apps`: shell, Discovery, and Geology production builds passed.
 - The compiled production server returned 200 for its readiness document and
   shell HTML routes, 200 for both remote manifests, 404 for missing assets, and
   400 for malformed URLs. This verifies HTTP serving, not browser execution.
-- The production browser command is `pnpm run test:browser:gate-three:production`.
+- The production browser command is `pnpm run test:browser:production`.
   CI runs it after existing browser checks and retains a separate artifact.
 
 Browser measurements, project-specific performance budgets, and unfamiliar-developer

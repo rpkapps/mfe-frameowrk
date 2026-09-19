@@ -27,7 +27,7 @@ export interface MountAttempt {
   /** Stable across retries; aborted only when the mount is disposed. */
   readonly mountSignal: AbortSignal;
   readonly isCurrent: () => boolean;
-  /** Gate side effects after each await; a retired attempt cannot attach UI. */
+  /** Commit side effects after each await; a retired attempt cannot attach UI. */
   readonly commit: (effect: () => void) => boolean;
   /** Register immediately after acquisition. Runs synchronously at retirement. */
   readonly onDetach: (detach: () => void) => void;

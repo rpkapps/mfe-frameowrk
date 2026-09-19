@@ -1,8 +1,8 @@
 import { useEffect } from 'react';
 import { useGroups, useTheme, useUser } from '@company/mfe-react';
 
-/** Gate 3 scale shape used by an executable profiling runner. */
-export const GATE_THREE_SCALE = Object.freeze({
+/** Widget/storage scaling shape used by an executable profiling runner. */
+export const WIDGET_STORAGE_SCALING = Object.freeze({
   appMounts: 2,
   widgetMounts: 50,
   storageKeys: 100,

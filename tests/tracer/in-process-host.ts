@@ -36,7 +36,7 @@ interface TracerOptions {
   readonly shellState?: ShellState;
 }
 
-/** The in-process loader and memory boundary are test-internal (§16 Gate 0). */
+/** The in-process loader and memory boundary are test-internal fixtures. */
 export function createTracerMount(options: TracerOptions) {
   const definition = options.definitions.get(options.id);
   if (!definition) throw new Error(`No in-process fixture definition for ${options.id}.`);

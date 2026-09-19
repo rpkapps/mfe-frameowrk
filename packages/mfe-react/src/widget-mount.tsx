@@ -114,7 +114,7 @@ export function WidgetMount(props: WidgetMountProps) {
       unsubscribe();
       void mount.handle.dispose().catch(() => {});
     };
-    // The resource gates activation; prop changes are forwarded by the update effect.
+    // The resource controls activation; prop changes are forwarded by the update effect.
     // eslint-disable-next-line react-hooks/exhaustive-deps -- one neutral lifecycle per ready Widget identity.
   }, [host.widgetRuntime, props.id, resource]);
 

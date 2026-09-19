@@ -1,6 +1,6 @@
 # @company/eslint-plugin-mfe
 
-Development-only, versioned flat configurations for the MFE framework. This package is currently private while Gate 0 is under verification.
+Development-only, versioned flat configurations for the MFE framework. This package is currently private while the framework remains under verification.
 
 ```js
 import mfe from '@company/eslint-plugin-mfe';

@@ -15,8 +15,8 @@ import { watchRemoteUpdates } from '@company/mfe-rsbuild/runtime';
 import { Button } from '@tecton/react/components/button';
 import { registry, overrideWarnings, remotes } from './registry';
 import { TestShell, AppFailure } from './shell';
-import { createGateThreeWidgetRuntime, GateThreeWidgetGrid } from './gate-three-scale';
-import { gateThreeWidgetIds } from './gate-three-scale';
+import { createWidgetScalingRuntime, WidgetScalingGrid } from './widget-storage-scaling';
+import { scalingWidgetIds } from './widget-storage-scaling';
 import './global.css';
 
 const navigation = createBrowserNavigation(window);
@@ -27,7 +27,7 @@ const storage = createInternalStorageCoordinator({
   local: window.localStorage,
   session: window.sessionStorage,
   generation: 'test-shell-generation',
-  knownDefinitionIds: ['discovery', 'geology', ...gateThreeWidgetIds],
+  knownDefinitionIds: ['discovery', 'geology', ...scalingWidgetIds],
 });
 let generationCounter = 0;
 const createGeneration = () => `test-shell-generation:${++generationCounter}`;
@@ -37,7 +37,7 @@ const session = createShellSession({
   initial: shellState.getSnapshot(),
   store: shellState,
 });
-const widgetFixture = createGateThreeWidgetRuntime(shellState, storage, session);
+const widgetFixture = createWidgetScalingRuntime(shellState, storage, session);
 const widgetRuntime = widgetFixture.runtime;
 const hostEnvironment: MfeHostEnvironment = {
   get runtime() {
@@ -118,7 +118,7 @@ function ShellApplication() {
   const scaleRoute =
     location.pathname.startsWith('/discovery/project') &&
     new URLSearchParams(location.search).get('dual') === '1' &&
-    new URLSearchParams(location.search).get('gate3') === 'scale';
+    new URLSearchParams(location.search).get('fixture') === 'widget-storage-scaling';
   const [theme, setTheme] = useState(readTheme);
   const dualDiscovery =
     appId === 'discovery' &&
@@ -153,7 +153,7 @@ function ShellApplication() {
         <div className="grid min-h-0 flex-1 gap-3 p-3">
           <DualDiscovery />
           <Suspense fallback={<div role="status">Loading scale Widgets…</div>}>
-            <GateThreeWidgetGrid />
+            <WidgetScalingGrid />
           </Suspense>
         </div>
       ) : dualDiscovery ? (

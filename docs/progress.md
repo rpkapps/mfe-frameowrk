@@ -147,7 +147,7 @@ The active build surface is now `@company/mfe-rsbuild`: native `mfePlugin` and `
 
 - `corepack pnpm@12.4.2 install --frozen-lockfile` passed with the existing dependency-script policy. No new third-party version or script approval was introduced.
 - `corepack pnpm@12.4.2 run check` passed: generation, Prettier, full ESLint, strict workspace and independent App types, package boundaries, **161 behavior tests**, and real packed-fixture dependency-script controls.
-- `corepack pnpm@12.4.2 run gate:0` passed both revised conformance tests. Assertions are neither skipped nor marked as expected failures.
+- `corepack pnpm@12.4.2 run test:conformance` passed both revised conformance tests. Assertions are neither skipped nor marked as expected failures.
 - Repeated generation is byte-identical (`59547ee160aa4203bca7d2bea7a68a117b04a85b658df924a336a0da5fbbac17`). The generated tree stays ignored.
 - Independent implementation, acceptance testing, and review covered field subscriptions, native event ordering, reserved keys, error fallbacks, Query observers, session overlap, and disposal. All reported P1/P2 findings are closed with targeted regressions.
 

@@ -1,7 +1,7 @@
-# Gate 3 author journey fixtures
+# Author testing fixtures
 
-This document records the executable, in-process slice of the Gate 3 author
-journey. It is deliberately a component-test fixture: it uses an explicit shell-state fixture and therefore
+This document records the executable, in-process author testing journey. It is
+deliberately a component-test fixture: it uses an explicit shell-state fixture and therefore
 does not claim real authentication, federation, browser layout, or shell
 enrollment.
 
@@ -38,13 +38,13 @@ their selected snapshot across `await`.
 The fixture setup is suitable for Vitest and React Testing Library and does
 not require a shell process or credentials. Typed test-only aliases supply
 `#mfe/config` and `#mfe/fetch`; production generation and authentication remain
-Gate 5 work. Browser bridge, CSS/layout,
+separate integration work. Browser bridge, CSS/layout,
 authenticated fetch, and federation coverage remain Playwright or shell
 integration concerns.
 
 ## Current executable subset
 
-The Gate 3 tests exercise the following author actions against the production
+The integration tests exercise the following author actions against the production
 React driver and host lifecycle:
 
 - mount a real App definition through an in-process registered loader;
@@ -55,12 +55,12 @@ React driver and host lifecycle:
 - dispose repeatedly without retaining the DOM target or subscriptions.
 
 The fixture intentionally has no implicit telemetry recorder. Telemetry and
-tracing remain deferred until their explicit implementation gate.
+tracing remain deferred until their dedicated implementation work.
 
 ## Performance fixture
 
-`tests/gate-three/performance-fixture.tsx` contains isolated user, groups, and
-theme probes plus the representative Gate 3 scale shape (two App mounts, 50
+`tests/react-integration/performance-fixture.tsx` contains isolated user, groups, and
+theme probes plus the representative widget/storage scaling shape (two App mounts, 50
 Widgets, and 100 storage keys). A production/profiling runner
 can render these probes, apply one trigger at a time, and record validation,
 subscription, callback, commit, and elapsed counters. The fixture defines no
@@ -73,11 +73,11 @@ payloads, network profile, and agreed project budget alongside measurements.
 The in-process author journey is executable from the repository root:
 
 ```text
-pnpm exec vitest run tests/gate-three/testing-utilities.test.ts tests/gate-three/testing-utilities.integration.test.tsx --reporter dot
+pnpm exec vitest run tests/react-integration/testing-utilities.test.ts tests/react-integration/testing-utilities.integration.test.tsx --reporter dot
 ```
 
 On 2026-09-19 this run completed with 8 tests passing.
-The Vitest setup file at `tests/gate-three/setup.ts` awaits `cleanupMfeTests`
+The Vitest setup file at `tests/react-integration/setup.ts` awaits `cleanupMfeTests`
 after every test, including failed assertions, then resets the alias fixtures.
 The test config resolves `#mfe/config` and `#mfe/fetch` to typed fixtures;
 tests use the named imports `config` and `fetch`. The

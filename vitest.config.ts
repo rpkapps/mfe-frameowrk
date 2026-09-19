@@ -7,8 +7,8 @@ const root = fileURLToPath(new URL('.', import.meta.url));
 export default defineConfig({
   resolve: {
     alias: {
-      '#mfe/config': resolve(root, 'tests/gate-three/config-fixture.ts'),
-      '#mfe/fetch': resolve(root, 'tests/gate-three/fetch-fixture.ts'),
+      '#mfe/config': resolve(root, 'tests/react-integration/config-fixture.ts'),
+      '#mfe/fetch': resolve(root, 'tests/react-integration/fetch-fixture.ts'),
     },
   },
   test: {
@@ -17,6 +17,6 @@ export default defineConfig({
     exclude: ['**/node_modules/**', '**/dist/**', 'tests/conformance/**'],
     restoreMocks: true,
     clearMocks: true,
-    setupFiles: ['./tests/gate-three/setup.ts'],
+    setupFiles: ['./tests/react-integration/setup.ts'],
   },
 });

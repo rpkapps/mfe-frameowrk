@@ -1,6 +1,6 @@
 # MFE framework
 
-A local Tecton shell and two independently served MF2 Apps live in this repository. The shell owns the header; Discovery and Geology own everything below it. Gate 0 remains passed; the test environment is an integration checkpoint, not a complete framework release.
+A local Tecton shell and two independently served MF2 Apps live in this repository. The shell owns the header; Discovery and Geology own everything below it. The app-adapter contract is verified; the test environment is an integration checkpoint, not a complete framework release.
 
 ## Run the test environment
 
@@ -29,10 +29,10 @@ Use Node **24.19.0** and the latest stable pnpm. Install pnpm with `npx get-pnpm
 ```sh
 pnpm install --frozen-lockfile
 pnpm run check
-pnpm run gate:0
+pnpm run test:conformance
 ```
 
-`check` verifies generation, formatting, lint, strict types, package boundaries, dependency-script controls, and behavior tests. `gate:0` separately verifies the approved history and live-state contract. CI runs both commands. Current results are recorded in [progress](docs/progress.md).
+`check` verifies generation, formatting, lint, strict types, package boundaries, dependency-script controls, and behavior tests. `test:conformance` separately verifies the approved history and live-state contract. CI runs both commands. Current results are recorded in [progress](docs/progress.md).
 
 Generation runs automatically before typechecking. `pnpm run generate` is the recovery command. The introductory App has its own TypeScript program and native `Register` augmentation; `routeTree.gen.ts` is generated and ignored.
 
@@ -46,6 +46,6 @@ The adapter reports reserved-context conflicts, preserves native author error bo
 
 ## Integration scope
 
-The user approved an in-repo test shell because no separate shell repository exists. It uses a fixed development persona and local App registry; it does not claim authenticated production integration. Remaining Gate 1 proofs and later gate requirements are recorded in [progress](docs/progress.md).
+The user approved an in-repo test shell because no separate shell repository exists. It uses a fixed development persona and local App registry; it does not claim authenticated production integration. Remaining integration proofs and future requirements are recorded in [progress](docs/progress.md).
 
 Read [contributing guidance](docs/contributing.md), [dependency-script policy](docs/dependency-build-policy.md), and [approved contract revisions](docs/approved-contract-revisions.md).

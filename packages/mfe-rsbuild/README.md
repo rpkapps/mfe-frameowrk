@@ -54,7 +54,7 @@ The final PostCSS pass wraps utilities and local rules in a native scope with a 
 boundary. Keyframes and Tailwind's registered custom properties receive per-App names;
 shell-owned design tokens keep their original names. Global selectors, font faces, unresolved
 imports, and unsupported global at-rules fail the build with their source location. Full
-overlay and browser-matrix acceptance belongs to the CSS integration gate.
+overlay and browser-matrix acceptance belongs to the CSS integration suite.
 
 The test environment uses an explicit remote rebuild/reload fallback. React Fast Refresh is
 not installed or claimed by this package.

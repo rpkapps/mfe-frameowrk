@@ -1,10 +1,9 @@
 # Current storage contract
 
-Gate2 exposes storage through the neutral host coordinator. The React-facing
-`useMfeStorage`, `context.mfe.storage`, and `useStoredState` facade described in
-the framework specification is planned for Gate3; it is not a current export.
-Framework-owned integration creates a coordinator and gives each definition
-its namespaced handles:
+The neutral host coordinator owns storage, while the React package exposes the
+author-facing `useMfeStorage`, `context.mfe.storage`, and `useStoredState`
+facade. Framework-owned integration creates a coordinator and gives each
+definition its namespaced handles:
 
 ```ts
 import { createStorageCoordinator } from '@company/mfe-host';
@@ -117,9 +116,9 @@ or, for all records owned by that definition in that store,
 `reports.local.clear()`. These operations never clear unrelated shell or
 third-party records.
 
-## Existing Gate 3 contract debt
+## App host integration
 
-The current `AppHost` implementation still uses its existing `id`,
-`renderStatus`, and `runtime` properties. Aligning those properties with the
-specification's `appId` and `fallback` contract remains a separate Gate 3 task
-under the existing gate ordering.
+`AppHost` receives an `appId` and `basePath`, mounts through the host runtime,
+and accepts an optional `fallback` for load or mount errors. Its `className`
+styles the owned placement; runtime and storage ownership remain with the
+shell's host environment.

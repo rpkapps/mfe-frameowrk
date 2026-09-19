@@ -5,7 +5,7 @@ import { configureTestConfig } from './config-fixture';
 import { fetch } from '#mfe/fetch';
 import { getFixtureRequests } from './fetch-fixture';
 
-describe('Gate 3 generated author aliases', () => {
+describe('generated author aliases', () => {
   it('provides typed config and a controlled fetch boundary', async () => {
     configureTestConfig({ persona: 'alias-test' });
     expect(config.persona).toBe('alias-test');

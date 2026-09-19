@@ -103,7 +103,7 @@ afterEach(async () => {
   document.body.replaceChildren();
 });
 
-describe('Gate 0 adapter contract tracer', () => {
+describe('adapter contract tracer', () => {
   it('isolates two mounts that share one generated-style route tree', async () => {
     const root = createRootRouteWithContext<AuthorContext>()({ component: Outlet });
     const index = createRoute({ getParentRoute: () => root, path: '/', component: ContextView });

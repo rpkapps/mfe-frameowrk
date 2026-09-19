@@ -51,7 +51,7 @@ function contextText() {
   return 'mounted';
 }
 
-describe('Gate 3 author testing facade', () => {
+describe('author testing facade', () => {
   it('supports component-only providers with stable Query/router identities and shell hooks', async () => {
     const environment = createMfeTestEnvironment({
       id: 'component-only',

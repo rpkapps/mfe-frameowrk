@@ -1,8 +1,8 @@
 import { expect, test } from '@playwright/test';
 
 /**
- * Gate 3 browser evidence. The fixture uses the real development shell, two App
- * mounts, and the 50 Widget/100-key scale route. It deliberately records
+ * Mount-isolation browser evidence. The fixture uses the real development shell,
+ * two App mounts, and the 50 Widget/100-key scaling route. It deliberately records
  * observations instead of inventing timing budgets. The production config runs
  * the same spec against compiled assets.
  */
@@ -18,11 +18,12 @@ test('records runtime mount metadata and independently cleans up one App mount',
   await expect(page.getByTestId('dual-first')).toBeVisible();
   await expect(page.getByTestId('dual-second')).toBeVisible();
   const warmup = await page.evaluate(() => {
-    const target = window as Window & { __gateThreeLongTasks?: number[] };
+    const target = window as Window & { __mountIsolationLongTasks?: number[] };
     const observer = new PerformanceObserver((entries) => {
-      for (const entry of entries.getEntries()) target.__gateThreeLongTasks?.push(entry.duration);
+      for (const entry of entries.getEntries())
+        target.__mountIsolationLongTasks?.push(entry.duration);
     });
-    target.__gateThreeLongTasks = [];
+    target.__mountIsolationLongTasks = [];
     try {
       observer.observe({ type: 'longtask', buffered: true });
     } catch {
@@ -61,26 +62,27 @@ test('records runtime mount metadata and independently cleans up one App mount',
         : null;
     })(),
     sampleCount: 1,
-    longTasks: (window as Window & { __gateThreeLongTasks?: number[] }).__gateThreeLongTasks ?? [],
+    longTasks:
+      (window as Window & { __mountIsolationLongTasks?: number[] }).__mountIsolationLongTasks ?? [],
     resourceCount: performance.getEntriesByType('resource').length,
   }));
-  await testInfo.attach('gate-three-runtime-evidence.json', {
+  await testInfo.attach('mount-isolation-runtime-evidence.json', {
     body: JSON.stringify({ ...evidence, warmup, requests }, null, 2),
     contentType: 'application/json',
   });
 });
 
 test('isolates one Widget key update across the 50 Widget, 100 key fixture', async ({ page }) => {
-  await page.goto('/discovery/project/?dual=1&gate3=scale');
+  await page.goto('/discovery/project/?dual=1&fixture=widget-storage-scaling');
   await expect(
     page.getByTestId('dual-first').getByRole('heading', { name: 'Orion Discovery', exact: true }),
   ).toBeVisible();
   await expect(
     page.getByTestId('dual-second').getByRole('heading', { name: 'Orion Discovery', exact: true }),
   ).toBeVisible();
-  const grid = page.getByTestId('gate-three-widget-grid');
+  const grid = page.getByTestId('widget-scaling-grid');
   await expect(grid).toHaveAttribute('data-widget-count', '50');
-  const widgets = grid.locator('[data-gate-three-widget]');
+  const widgets = grid.locator('[data-widget-scaling-id]');
   await expect(widgets).toHaveCount(50);
   await expect
     .poll(
@@ -92,7 +94,7 @@ test('isolates one Widget key update across the 50 Widget, 100 key fixture', asy
     .toBe(true);
   const before = await widgets.evaluateAll((nodes) =>
     nodes.map((node) => ({
-      id: node.getAttribute('data-gate-three-widget'),
+      id: node.getAttribute('data-widget-scaling-id'),
       commits: node.getAttribute('data-commits'),
       keys: node.getAttribute('data-key-values'),
     })),
@@ -101,7 +103,7 @@ test('isolates one Widget key update across the 50 Widget, 100 key fixture', asy
   await expect(widgets.nth(0)).toHaveAttribute('data-key-values', '1,0');
   const after = await widgets.evaluateAll((nodes) =>
     nodes.map((node) => ({
-      id: node.getAttribute('data-gate-three-widget'),
+      id: node.getAttribute('data-widget-scaling-id'),
       commits: node.getAttribute('data-commits'),
       keys: node.getAttribute('data-key-values'),
     })),

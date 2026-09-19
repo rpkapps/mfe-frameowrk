@@ -22,8 +22,8 @@ export default [
     })),
   ),
   {
-    name: 'workspace/gate-three-host-assembly',
-    files: ['fixtures/test-shell/src/gate-three-scale.tsx'],
+    name: 'workspace/widget-scaling-host-assembly',
+    files: ['fixtures/test-shell/src/widget-storage-scaling.tsx'],
     rules: { 'mfe/no-widget-global-effects': 'error' },
   },
   {

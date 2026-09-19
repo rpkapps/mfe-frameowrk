@@ -16,8 +16,8 @@
     "noEmit": true,
     "types": ["node", "vitest/globals"],
     "paths": {
-      "#mfe/config": ["./tests/gate-three/config-fixture.ts"],
-      "#mfe/fetch": ["./tests/gate-three/fetch-fixture.ts"],
+      "#mfe/config": ["./tests/react-integration/config-fixture.ts"],
+      "#mfe/fetch": ["./tests/react-integration/fetch-fixture.ts"],
       "@company/mfe-core": ["./packages/mfe-core/src/index.ts"],
       "@company/mfe-host": ["./packages/mfe-host/src/index.ts"],
       "@company/mfe-host/internal": ["./packages/mfe-host/src/internal.ts"],

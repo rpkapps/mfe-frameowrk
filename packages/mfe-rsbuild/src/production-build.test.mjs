@@ -37,7 +37,7 @@ it('builds a bounded remote with compiled and explicitly excluded adapter consum
     expect(shared[name], name).toMatchObject({ singleton: true, strictVersion: true });
   }
 
-  const output = await mkdtemp(path.join(os.tmpdir(), 'mfe-gate-one-'));
+  const output = await mkdtemp(path.join(os.tmpdir(), 'mfe-production-build-'));
   try {
     const root = path.join(workspace, 'fixtures', app.directory);
     // Keep names and compiler output readable so this assertion checks emitted

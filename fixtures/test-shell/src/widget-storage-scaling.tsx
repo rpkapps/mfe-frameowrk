@@ -10,40 +10,40 @@ import { useLayoutEffect, useRef } from 'react';
 import { Button } from '@tecton/react/components/button';
 
 /** Production/profiling scale: two App mounts, fifty Widget mounts, 100 keys. */
-export const GATE_THREE_WIDGET_COUNT = 50;
-export const GATE_THREE_STORAGE_KEY_COUNT = 100;
+export const SCALING_WIDGET_COUNT = 50;
+export const WIDGET_SCALING_STORAGE_KEY_COUNT = 100;
 const inputSchema = z.object({ value: z.number() });
 const storageNumberSchema = z.number();
 const emptyEvents = {} as const;
 
-export const gateThreeWidgetIds = Object.freeze(
-  Array.from({ length: GATE_THREE_WIDGET_COUNT }, (_, index) => `gate3-widget-${index + 1}`),
+export const scalingWidgetIds = Object.freeze(
+  Array.from({ length: SCALING_WIDGET_COUNT }, (_, index) => `widget-scaling-${index + 1}`),
 );
-export const gateThreeCommitCounts = new Map<string, number>();
-export function resetGateThreeCommitCounts() {
-  gateThreeCommitCounts.clear();
+export const widgetScalingCommitCounts = new Map<string, number>();
+export function resetWidgetScalingCommitCounts() {
+  widgetScalingCommitCounts.clear();
 }
 function ScaleWidgetBody({ id, value }: { id: string; value: number }) {
-  const index = Number(id.slice('gate3-widget-'.length)) - 1;
+  const index = Number(id.slice('widget-scaling-'.length)) - 1;
   const outputRef = useRef<HTMLOutputElement>(null);
-  const [first, setFirst] = useStoredState(`gate3-key-${index * 2}`, storageNumberSchema, {
+  const [first, setFirst] = useStoredState(`widget-storage-key-${index * 2}`, storageNumberSchema, {
     defaultValue: 0,
   });
-  const [second] = useStoredState(`gate3-key-${index * 2 + 1}`, storageNumberSchema, {
+  const [second] = useStoredState(`widget-storage-key-${index * 2 + 1}`, storageNumberSchema, {
     defaultValue: 0,
   });
   useLayoutEffect(() => {
-    const commits = (gateThreeCommitCounts.get(id) ?? 0) + 1;
-    gateThreeCommitCounts.set(id, commits);
+    const commits = (widgetScalingCommitCounts.get(id) ?? 0) + 1;
+    widgetScalingCommitCounts.set(id, commits);
     outputRef.current?.setAttribute('data-commits', String(commits));
   });
   return (
     <output
       ref={outputRef}
-      data-gate-three-widget={id}
-      data-storage-keys={`gate3-key-${index * 2},gate3-key-${index * 2 + 1}`}
+      data-widget-scaling-id={id}
+      data-storage-keys={`widget-storage-key-${index * 2},widget-storage-key-${index * 2 + 1}`}
       data-value={value}
-      data-commits={gateThreeCommitCounts.get(id) ?? 0}
+      data-commits={widgetScalingCommitCounts.get(id) ?? 0}
       data-key-values={`${first},${second}`}
     >
       <Button variant="outline" onPress={() => setFirst(first + 1)}>
@@ -53,8 +53,8 @@ function ScaleWidgetBody({ id, value }: { id: string; value: number }) {
   );
 }
 
-export const gateThreeDefinitions = Object.freeze(
-  gateThreeWidgetIds.map((id) =>
+export const widgetScalingDefinitions = Object.freeze(
+  scalingWidgetIds.map((id) =>
     createWidget({
       id,
       version: '0.0.0',
@@ -66,13 +66,13 @@ export const gateThreeDefinitions = Object.freeze(
 );
 
 /** Real lazyWidget consumers used by the scaling shell route. */
-export const gateThreeLazyWidgets = Object.freeze(
-  gateThreeWidgetIds.map((id) =>
+export const widgetScalingLazyWidgets = Object.freeze(
+  scalingWidgetIds.map((id) =>
     lazyWidget(id, { contract: { inputs: inputSchema, events: emptyEvents } }),
   ),
 );
 
-export function GateThreeWidgetGrid({
+export function WidgetScalingGrid({
   value = 0,
   valueForWidget,
 }: {
@@ -80,21 +80,21 @@ export function GateThreeWidgetGrid({
   readonly valueForWidget?: (index: number) => number;
 }) {
   return (
-    <div data-testid="gate-three-widget-grid" data-widget-count={GATE_THREE_WIDGET_COUNT}>
-      {gateThreeLazyWidgets.map((Widget, index) => (
-        <Widget key={gateThreeWidgetIds[index]} value={valueForWidget?.(index) ?? value} />
+    <div data-testid="widget-scaling-grid" data-widget-count={SCALING_WIDGET_COUNT}>
+      {widgetScalingLazyWidgets.map((Widget, index) => (
+        <Widget key={scalingWidgetIds[index]} value={valueForWidget?.(index) ?? value} />
       ))}
     </div>
   );
 }
 
-export function createGateThreeWidgetRuntime(
+export function createWidgetScalingRuntime(
   shellState: ShellStateStore,
   coordinator: InternalStorageCoordinator,
   session: ShellSessionBoundary,
 ): { readonly runtime: WidgetRuntime; readonly dispose: () => void } {
   const runtime = createWidgetRuntime({
-    registry: gateThreeDefinitions.map((definition) => ({
+    registry: widgetScalingDefinitions.map((definition) => ({
       id: definition.id,
       kind: 'widget' as const,
       contractMajor: 1,

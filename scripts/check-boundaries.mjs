@@ -42,9 +42,9 @@ const ignoredDirectories = new Set([
   'dist',
   'coverage',
   'test-results',
-  'test-results-gate-three-production',
+  'test-results-production-browser',
   'playwright-report',
-  'playwright-report-gate-three-production',
+  'playwright-report-production-browser',
 ]);
 
 function packageName(specifier) {
@@ -62,20 +62,19 @@ export function dependencyViolation(owner, specifier) {
   const target = packageName(specifier);
   if (runtimePackages.has(owner)) {
     if (statePackages.has(target))
-      return 'Framework state must use purpose-specific TypeScript structures (§12.4).';
-    if (vendorPackage(target))
-      return 'Telemetry providers belong to the shell integration (§5.16).';
+      return 'Framework state must use purpose-specific TypeScript structures.';
+    if (vendorPackage(target)) return 'Telemetry providers belong to the shell integration.';
     if (target === '@company/eslint-plugin-mfe')
-      return 'Development lint tooling must not enter runtime packages (§12.2).';
+      return 'Development lint tooling must not enter runtime packages.';
     if (
       target.startsWith('@company/mfe-') &&
       target !== owner &&
       !runtimeEdges[owner].includes(target)
     ) {
-      return `${owner} cannot depend on ${target}; follow the runtime import DAG (§12.2).`;
+      return `${owner} cannot depend on ${target}; adapters may import host and core, host may import core, and core has no framework runtime dependencies.`;
     }
     if (target.startsWith('single-spa') && owner !== '@company/mfe-legacy-angular') {
-      return 'Only the legacy adapter may import the single-spa contract (§12.2).';
+      return 'Only the legacy adapter may import the single-spa contract.';
     }
   }
   if (owner === '@company/mfe-core' || owner === '@company/mfe-host') {
@@ -91,7 +90,7 @@ export function dependencyViolation(owner, specifier) {
       target.startsWith('@angular/') ||
       target.startsWith('single-spa')
     ) {
-      return 'The neutral core and host cannot import UI, router, federation, or legacy dependencies (§12).';
+      return 'The neutral core and host cannot import UI, router, federation, or legacy dependencies.';
     }
   }
   return undefined;

@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { MemoryStorage } from '@company/mfe-react/testing';
 
-describe('Gate 3 supported test fixtures', () => {
+describe('supported author test fixtures', () => {
   it('provides isolated browser-storage semantics with deterministic ordering', () => {
     const first = new MemoryStorage();
     const second = new MemoryStorage();
